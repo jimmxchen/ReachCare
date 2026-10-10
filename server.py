@@ -17,7 +17,8 @@ from urllib.parse import parse_qs, urlparse
 
 import numpy as np
 
-from planner import feeds
+from planner.subscribers import Subscribers
+from planner import bot, planchat, feeds, gemini, geocode, siting
 from planner.model import SERVICES, MODEL_VERSION, default_config, demo_operations, input_hash, run_plan
 from planner.store import Store
 
@@ -26,6 +27,7 @@ ROOT = Path(__file__).resolve().parent
 
 class Application:
     def __init__(self, data_dir=None, runtime_dir=None):
+        gemini._load_env()
         data_dir = Path(data_dir or ROOT / "data")
         self.data_dir = data_dir
         self.state = json.loads((data_dir / "nc.json").read_text())
@@ -36,8 +38,19 @@ class Application:
             raise ValueError("Routing IDs do not align with the dataset. Rebuild the matrix.")
         self.store = Store(Path(runtime_dir or ROOT / ".runtime") / "planner.sqlite3")
         self.store.seed(self.state, self.routing)
+        self.subscribers = Subscribers(Path(runtime_dir or ROOT / ".runtime") / "subscribers.json")
+        self.signup_times = []
         self.run_lock = threading.Lock()
         self.feed_lock = threading.Lock()
+
+    def county_centers(self):
+        sums = {}
+        for t in self.state["tracts"]:
+            if t.get("lat") is not None and t.get("eligible_population"):
+                w = t["eligible_population"]
+                a = sums.setdefault(t["county_id"], [0, 0, 0])
+                a[0] += t["lat"] * w; a[1] += t["lon"] * w; a[2] += w
+        return {k: [round(a[0] / a[2], 4), round(a[1] / a[2], 4)] for k, a in sums.items() if a[2]}
 
     def current_state(self):
         state = copy.deepcopy(self.state)
@@ -80,6 +93,23 @@ class Application:
                     "site_changes": [{"site_id": r["site"]["id"], "name": r["site"]["name"], "previous_rank": old.get(r["site"]["id"], {}).get("rank"), "current_rank": r["rank"], "score_change": round(r["score"] - old.get(r["site"]["id"], {}).get("score", 0), 6)} for r in result["recommendations"][:3]],
                     "removed_sites": [r["site"]["name"] for r in before["recommendations"] if r["site"]["id"] in {e["id"] for e in result["excluded"]}]}
             return self.store.save_run(snapshot, result, digest, reason)
+
+    def site(self, params):
+        if params.get("lat") is None or params.get("lon") is None:
+            params = {**params, **geocode.locate(params.get("hospital_name", ""))}
+        plan = siting.site_clinics(self.state, self.routes, params)
+        plan["created_at"] = datetime.now(timezone.utc).isoformat()
+        with self.run_lock:
+            path = Path(self.store.path).parent / "clinic_plans.json"
+            plans = json.loads(path.read_text()) if path.is_file() else []
+            plan["id"] = f"plan-{len(plans) + 1}"
+            plans.append({k: plan[k] for k in ("id", "created_at", "params", "hospital", "service_name", "clinics", "summary")})
+            path.write_text(json.dumps(plans[-50:]))
+        return plan
+
+    def plans(self):
+        path = Path(self.store.path).parent / "clinic_plans.json"
+        return json.loads(path.read_text()) if path.is_file() else []
 
     def import_csv(self, kind, contents):
         if not isinstance(contents, str) or len(contents) > 1000000:
@@ -190,6 +220,19 @@ class Handler(BaseHTTPRequestHandler):
                 self.json_response(feeds.states(self.app.store))
             elif path == "/api/outcomes":
                 self.json_response(self.app.store.outcomes())
+            elif path == "/api/clinic-options":
+                self.json_response({"counties": self.app.state["counties"], "services": {k: v["name"] for k, v in SERVICES.items()},
+                                    "radii": list(siting.RADII), "gemini": gemini.available(), "maps": geocode.available(),
+                                    })
+            elif path == "/api/places/suggest":
+                q = parse_qs(url.query)
+                self.json_response({"suggestions": geocode.suggest(q.get("q", [""])[0], q.get("session", [None])[0])})
+            elif path == "/api/places/details":
+                q = parse_qs(url.query)
+                self.json_response(geocode.place_details(q.get("id", [""])[0], q.get("session", [None])[0]))
+            elif path == "/api/plans":
+                file = Path(self.app.store.path).parent / "clinic_plans.json"
+                self.json_response(json.loads(file.read_text()) if file.is_file() else [])
             else:
                 base = self.app.data_dir if path.startswith("/data/") else ROOT / "web"
                 relative = path[6:] if path.startswith("/data/") else path.lstrip("/") or "index.html"
@@ -210,8 +253,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             length = int(self.headers.get("Content-Length", 0))
-            if length <= 0 or length > 2000000:
-                raise ValueError("Request must be JSON under 2 MB")
+            limit = 20000000 if self.path.startswith("/api/bot/") else 2000000
+            if length <= 0 or length > limit:
+                raise ValueError(f"Request must be JSON under {limit // 1000000} MB")
             origin = self.headers.get("Origin")
             if origin and origin != "http://" + self.headers.get("Host", ""):
                 self.json_response({"error": "Cross-origin changes are disabled"}, 403)
@@ -220,7 +264,57 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(payload, dict):
                 raise ValueError("Expected a JSON object")
             path = urlparse(self.path).path
-            if path == "/api/runs":
+            if path == "/api/bot/message":
+                try:
+                    self.json_response(bot.handle(self.app.plans(), self.app.subscribers, payload))
+                except RuntimeError as exc:
+                    self.json_response({"error": str(exc)}, 502)
+            elif path == "/api/bot/notify":
+                plan = next((p for p in self.app.plans() if p["id"] == payload.get("plan_id")), None)
+                if not plan:
+                    raise ValueError("Unknown plan.")
+                dry = bool(payload.get("dry_run"))
+                queued = [m for c in plan["clinics"] for m in bot.notifications(self.app.subscribers, c, plan["hospital"], mark=not dry)]
+                if not dry:
+                    self.app.subscribers.queue(queued)
+                self.json_response({"queued": len(queued), "people": len({m["sender"] for m in queued}), "dry_run": dry})
+            elif path == "/api/signup":
+                now = time.time()
+                recent = [t for t in self.app.signup_times if now - t < 60]
+                if len(recent) >= 20:
+                    raise ValueError("Too many sign-ups right now. Please try again in a minute.")
+                self.app.signup_times = recent + [now]
+                self.json_response(bot.signup(self.app.subscribers, payload), 201)
+            elif path == "/api/bot/requeue":
+                self.app.subscribers.queue([m for m in payload.get("messages", []) if isinstance(m, dict) and m.get("sender") and m.get("text")])
+                self.json_response({"ok": True})
+            elif path == "/api/bot/outbox":
+                self.json_response({"messages": self.app.subscribers.drain()})
+            elif path == "/api/siting":
+                self.json_response(self.app.site(payload), 201)
+            elif path == "/api/gemini/parse":
+                if not gemini.available():
+                    self.json_response({"error": "Set GEMINI_API_KEY to enable AI intake."}, 503)
+                    return
+                try:
+                    self.json_response(gemini.parse_intake(str(payload.get("text", "")), self.app.state["counties"]))
+                except (RuntimeError, ValueError) as exc:
+                    self.json_response({"error": str(exc)}, 502)
+            elif path == "/api/plan-chat":
+                try:
+                    self.json_response({"reply": planchat.answer(self.app.state, self.app.routes, payload.get("params", {}), payload.get("messages", []))})
+                except RuntimeError as exc:
+                    self.json_response({"error": str(exc)}, 502)
+            elif path == "/api/gemini/explain":
+                if not gemini.available():
+                    self.json_response({"error": "Set GEMINI_API_KEY to enable AI explanations."}, 503)
+                    return
+                try:
+                    plan = siting.site_clinics(self.app.state, self.app.routes, payload.get("params", {}))
+                    self.json_response({"text": gemini.explain(plan, str(payload.get("language", "English"))[:40])})
+                except RuntimeError as exc:
+                    self.json_response({"error": str(exc)}, 502)
+            elif path == "/api/runs":
                 self.json_response(self.app.run(payload.get("config", {}), payload.get("change_reason", "Planner configuration updated")), 201)
             elif path == "/api/import":
                 self.json_response(self.app.import_csv(payload.get("kind"), payload.get("csv")))
