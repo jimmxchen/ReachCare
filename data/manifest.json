@@ -1,0 +1,189 @@
+{
+  "safety-net-2026-03.csv": {
+    "url": "https://files.nc.gov/dhhs/2026-03/SafetyNet_2026_03_31.csv?VersionId=jOUztrpAyG3ZQeTrs91c5HA8dp.B0zfq",
+    "retrieved_at": "2026-10-10T16:34:46.291647+00:00",
+    "sha256": "cee51685781230f7c83409e2085d4613849eef20f2440c1ac35b4b34c0745571"
+  },
+  "acs-2024-b08201-nc.dat": {
+    "url": "https://www2.census.gov/programs-surveys/acs/summary_file/2024/table-based-SF/data/5YRData/acsdt5y2024-b08201.dat",
+    "retrieved_at": "2026-10-10T16:34:58.441423+00:00",
+    "sha256": "80aefa1d63bd0a263fa98cf25644731810aad3ce3b9e0bbb71b0c0ea352b5e07",
+    "subset": "Original header and NC census tract rows; no values transformed"
+  },
+  "places-nc-2025.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24where=stateabbr%3D%27NC%27&%24limit=5000&%24order=tractfips",
+    "retrieved_at": "2026-10-10T16:34:49.270113+00:00",
+    "sha256": "4a66c1ffa32e47732e21fd1329da3425d560389375f33dd8450cce3e773a2431"
+  },
+  "pls-fy2024.zip": {
+    "url": "https://www.imls.gov/sites/default/files/2026-06/pls_fy2024_csv.zip",
+    "retrieved_at": "2026-10-10T16:34:49.195691+00:00",
+    "sha256": "6aad0913b6630879f0f859e4b54cd062b3c6e9853218153ca5e4aa2d678a11e7"
+  },
+  "acs-2024-b01001-nc.dat": {
+    "url": "https://www2.census.gov/programs-surveys/acs/summary_file/2024/table-based-SF/data/5YRData/acsdt5y2024-b01001.dat",
+    "retrieved_at": "2026-10-10T16:35:11.209287+00:00",
+    "sha256": "a867956cbafa7e9f3556a816ed7e95e2703275298591e97004989d95284a2bcf",
+    "subset": "Original header and NC census tract rows; no values transformed"
+  },
+  "cb_2023_37_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_37_tract_500k.zip",
+    "retrieved_at": "2026-10-10T16:34:46.448169+00:00",
+    "sha256": "b74ce3f4751a1e298210d20345f7810b360f5ba1198405aa9b31cbccd9404036"
+  },
+  "places-metadata.json": {
+    "url": "https://data.cdc.gov/api/views/yjkw-uj5s.json",
+    "retrieved_at": "2026-10-10T16:35:15.098730+00:00",
+    "sha256": "ccaa24cd3c410200c8a2b4ed4f537fe1f8f5536a7c70ac7705d85b5f2ba5fa14"
+  },
+  "geocode-5d1dfc25ef5c.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=102+RHODES+AVE%2C+Windsor%2C+NC+27983&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:12.925517+00:00",
+    "sha256": "a275127ec0c41f2faf7fdfa77d45f9117cd41c6c176c6066f322245717fba0df"
+  },
+  "geocode-1fb76e515e89.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=228+HILTON+ST%2C+Murphy%2C+NC+28906&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:14.717860+00:00",
+    "sha256": "d90a56970d46b035201eec12594f744349ba0838cc77383185505733ce89c9c7"
+  },
+  "geocode-4fcef30adea7.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=118+HAMBY+RD%2C+Dobson%2C+NC+27017&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:15.133225+00:00",
+    "sha256": "7f147035b6e8ad926c6a3ed2141015e4a55c63e4ef0f9fbb42d44b462570b2e5"
+  },
+  "geocode-838ef23a9a94.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=304+JEFFERSON+ST%2C+Whiteville%2C+NC+28472&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:15.497923+00:00",
+    "sha256": "c1e999ed1c3c8510b41fbee152f7efda6dabdc358696341f027a265a4588262e"
+  },
+  "geocode-10b2dd257b5b.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=221+CALLAHAN+KOON+RD%2C+Spindale%2C+NC+28160&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:15.885593+00:00",
+    "sha256": "7dc2986e450f5966ffdacf9bd8db6b6732b278cedb5639ce92ad0a37b9ba6a06"
+  },
+  "geocode-71a1530526fb.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=101+HUNT+DR%2C+Oxford%2C+NC+27565&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:16.239051+00:00",
+    "sha256": "b05115692a786f604e399bf673015d595d0d9df1529f5e20fc36cc3ffbdee385"
+  },
+  "geocode-821a9819f6ff.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=612+COLLEGE+ST%2C+Jacksonville%2C+NC+28540&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:16.645842+00:00",
+    "sha256": "41f5b7423233fab28771b6a83a53f1bf37d2dc92d18c5a6dd3ab8776cb4a4f3c"
+  },
+  "geocode-675272b16169.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=2330+CONCORD+AVE%2C+Monroe%2C+NC+28110&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:17.046087+00:00",
+    "sha256": "e5b54b98e853eaaec92929536d5cee19dd1a555ec2b30a1439aa248e2494c354"
+  },
+  "geocode-53c9a87fe7c7.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=109+EXETER+ST%2C+Manteo%2C+NC+27954&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:17.392598+00:00",
+    "sha256": "5a9493a3ffa36a1e705cd767dfe065f0f55c7791883b78b60d1ebb514a01f92e"
+  },
+  "geocode-624ce778f682.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=2795+CARATOKE+HWY%2C+Currituck%2C+NC+27929&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:17.769073+00:00",
+    "sha256": "e6aa3b6c741cf44b6c19aa0299215ec27a88929f64545722bfe353b87c68ae2c"
+  },
+  "geocode-774ad6ba016d.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=360+COUNTY+COMPLEX+RD%2C+Clinton%2C+NC+28328&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:18.220564+00:00",
+    "sha256": "b08dbd3ed9ec1ad6ed4fef29235eb433ac3375a2f8fc6ebc261587e3cb77f006"
+  },
+  "geocode-d773f5a6cd3f.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=2222+S+FAYETTEVILLE+ST%2C+Asheboro%2C+NC+27205&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:18.602894+00:00",
+    "sha256": "1ddf75b17fcfc257b683d41d5500db01a3ed06820318280446d47c8ff83374d7"
+  },
+  "geocode-a8fe0e8fb603.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=3070+11TH+AVENUE+DR+SE%2C+Hickory%2C+NC+28602&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:18.965699+00:00",
+    "sha256": "1ed961feacb892d80411a879ccb533519d39fa493dd2f1ddb9d14d6fb6bc126f"
+  },
+  "geocode-29ca8ebe9cf4.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=157+PARAGON+PKWY%2C+Clyde%2C+NC+28721&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:19.327135+00:00",
+    "sha256": "3351fe4e8ad234b46ba8125f231bc686ea14d20282d8d5f7be31fd4bac1ca407"
+  },
+  "geocode-e00672937925.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=3820+BRIDGES+ST%2C+Morehead+City%2C+NC+28557&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:19.746566+00:00",
+    "sha256": "005321d250bfbb56552d351621b2ea7982a90b656ed9fedd0b2fc2a24a5fc688"
+  },
+  "geocode-d51293fda331.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=25+COURTHOUSE+DR%2C+Bolivia%2C+NC+28422&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:20.152548+00:00",
+    "sha256": "e0a669497e0ed213e27f4ea506ef1924b3716c9dd54ded09bb4935d9cd29b3c7"
+  },
+  "geocode-275ff6d4f375.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=214+S+BARNES+ST%2C+Nashville%2C+NC+27856&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:23.097004+00:00",
+    "sha256": "10ab7ebe1d86d05b0cf54b82fc7e33d2b35925649cfa997e4aa56e3999dff91f"
+  },
+  "geocode-4269b7c8de48.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=127+CAROLINE+ST%2C+Rockingham%2C+NC+28379&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:24.069097+00:00",
+    "sha256": "641082773e9ddee8c9fb0f7096d8c8ea90ee6da241dd57fa2cae3970c8b25d33"
+  },
+  "geocode-047d66b47d53.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=126+POPLAR+GROVE+CONNECTOR%2C+Boone%2C+NC+28607&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:24.433559+00:00",
+    "sha256": "694898011da60b3af685f752f22fbcbbf410d49ea9006d86aae727f33fe47191"
+  },
+  "geocode-1d71b33b3130.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=371+NC+HWY+65%2C+Wentworth%2C+NC+27375&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:25.076226+00:00",
+    "sha256": "1a4661efd97b7df002aa8456f0f78639d918211ac961a96da2c06e94664f60c2"
+  },
+  "geocode-324cb8c10f3b.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=4114+DR+M+L+KING+JR+BLVD%2C+New+Bern%2C+NC+28562&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:26.037360+00:00",
+    "sha256": "719aadfab0fe445b840a13ee6d0cac0d739ad947b17a9d6a730cdfadc44743d8"
+  },
+  "geocode-f457e20970d9.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=307+W+CORNELIUS+HARNETT+BLVD%2C+Lillington%2C+NC+27546&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:26.443400+00:00",
+    "sha256": "ee512bf232391680b1af96571ddd4a6c5feba68c7a32b7bbdac0424e95eb3931"
+  },
+  "geocode-a0e50434bc97.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=1811+E+INNES+ST%2C+Salisbury%2C+NC+28146&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:26.771389+00:00",
+    "sha256": "fcd429f56b735846040465968168d803f12b7d0b0aa6f62c0e29ada3d8ece7d2"
+  },
+  "geocode-26c906b97ec7.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=408+BRIDGE+ST%2C+Columbia%2C+NC+27925&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:27.149436+00:00",
+    "sha256": "b03d4c6eb2633359436a08a8d9649f54ad49dae59fb9d2a84444cecae6f32bd1"
+  },
+  "geocode-3036e840ffc2.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=201+N+MCLEWEAN+ST%2C+Kinston%2C+NC+28504&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:27.519222+00:00",
+    "sha256": "a72c7227d8702d9325d4f3ae039fbc2c7de9e2c4c4560576c8568c235c3b84d7"
+  },
+  "geocode-e2f23634195a.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=9495+NC+305+HWY%2C+Jackson%2C+NC+27845&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:27.888836+00:00",
+    "sha256": "3471efa40f501a97a47563dbc3fed781164bb9d73e6e419f2389f3beb42fe56a"
+  },
+  "geocode-a19e86f7a596.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=544+WEST+RIDGEWAY+ST%2C+Warrenton%2C+NC+27589&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:28.235348+00:00",
+    "sha256": "d492b08a2bba100c9bd6c437a0a609e2c0d824c4d2f72698ad5767883f07de5b"
+  },
+  "geocode-dfede01699ff.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=350+E+HOLDING+AVE%2C+Wake+Forest%2C+NC+27587&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:28.611363+00:00",
+    "sha256": "5d5e737c4b26ec2716dbdb34f3ff3d9117c1039fafc4eeeecff3222d6145d8cf"
+  },
+  "geocode-fec4c4e83a0d.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=493+MEDICAL+PARK+DR%2C+Marshall%2C+NC+28753&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:28.973851+00:00",
+    "sha256": "fc1b749a07c5fb432ae01c5c51e7d6577b8dde54e23869e44c0c4f4bd4239320"
+  },
+  "geocode-1be7da21411a.json": {
+    "url": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=319+N+GRAHAM-HOPEDALE+RD%2C+Burlington%2C+NC+27217&benchmark=Public_AR_Current&format=json",
+    "retrieved_at": "2026-10-10T16:44:29.635898+00:00",
+    "sha256": "178ecd306f2e203ded9e981613f5791f087354b7c44ba35a2cbea048d5ccb4eb"
+  }
+}

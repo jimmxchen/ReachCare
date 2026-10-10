@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#143e3a">
+  <title>Rural Outreach Planner · North Carolina</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to planning workspace</a>
+  <aside class="sidebar" aria-label="Workspace navigation">
+    <a class="brand" href="/" aria-label="Rural Outreach Planner home">
+      <svg viewBox="0 0 36 36" aria-hidden="true"><path d="M18 3 31 10v16l-13 7-13-7V10Z" fill="#a9d7b8"/><path d="M15 10h6v5h5v6h-5v5h-6v-5h-5v-6h5Z" fill="#143e3a"/></svg>
+      <span>Rural Outreach<span class="brand-sub">PLANNING WORKSPACE</span></span>
+    </a>
+    <div class="workspace-label">NORTH CAROLINA</div>
+    <nav id="navigation">
+      <button class="nav-item active" data-view="planner"><span aria-hidden="true">◈</span> Campaign planner</button>
+      <button class="nav-item" data-view="venues"><span aria-hidden="true">⌖</span> Venues & care</button>
+      <button class="nav-item" data-view="conditions"><span aria-hidden="true">☀</span> Live conditions</button>
+      <button class="nav-item" data-view="history"><span aria-hidden="true">↺</span> Run history</button>
+      <button class="nav-item" data-view="outcomes"><span aria-hidden="true">▤</span> Event outcomes</button>
+      <button class="nav-item" data-view="methods"><span aria-hidden="true">≡</span> Data & methods</button>
+    </nav>
+    <div class="sidebar-footer"><span class="status-dot"></span> HackNC · October 2026<br><span>Public aggregate data</span></div>
+  </aside>
+
+  <main id="main" tabindex="-1">
+    <header class="topbar"><span>Outreach / <strong id="view-name">Campaign planner</strong></span><div><span class="pill quiet">NC statewide</span><span class="pill demo" id="mode-badge">Demo operations</span></div></header>
+    <section class="page-heading"><div><p class="eyebrow">PLAN WITH PURPOSE</p><h1 id="page-title">Blood-pressure screening</h1><p id="page-subtitle">Find feasible places to bring care closer, from the mountains to the coast.</p></div><div class="header-actions"><button class="button secondary" id="export-json" disabled>↓ Export inputs & results</button><button class="button secondary" id="export-brief" disabled>Event brief ↗</button></div></section>
+    <div id="notice" role="status" aria-live="polite" class="notice hidden"></div>
+    <div id="fatal-error" class="notice error hidden" role="alert"></div>
+
+    <section id="planner-view" class="view">
+      <div class="demo-banner" id="demo-banner"><span aria-hidden="true">◇</span><div><strong>Explore the statewide demo.</strong> Health, population, venues, and road times are public data. Host approvals, care verification, dates, and operating resources are sample inputs.</div><button id="confirmed-mode" class="text-button">Use confirmed inputs →</button></div>
+      <div class="planner-layout">
+        <form id="campaign-form" class="campaign-panel">
+          <div class="panel-title"><h2>Campaign setup</h2><span class="small-label">01</span></div>
+          <label>Service<select name="service" id="service"></select></label>
+          <label>Planning area<select name="region" id="region"><option value="NC">All North Carolina · 100 counties</option></select></label>
+          <div class="form-row"><label>Travel target<select name="travel_target"><option value="15">15 minutes</option><option value="20">20 minutes</option><option value="30" selected>30 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option></select></label><label>Events<select name="events"><option value="1">1 event</option><option value="2">2 events</option><option value="3">3 events</option><option value="4">4 events</option><option value="5">5 events</option></select></label></div>
+          <div class="form-row"><label>Earliest date<input type="date" name="date_start" required></label><label>Latest date<input type="date" name="date_end" required></label></div>
+          <label>Total budget <span class="unit">USD</span><input name="budget" type="number" min="0" max="1000000" step="25" value="5000" required></label>
+          <div class="section-divider"></div>
+          <h3>Program priorities</h3>
+          <p class="muted small">Weights express your planning priorities.</p>
+          <div class="slider-label"><label for="health-weight">Health indicator</label><strong id="weight-label">70%</strong></div>
+          <input id="health-weight" name="health_weight" type="range" min=".2" max=".8" step=".05" value=".7">
+          <div class="slider-ends"><span>Transport barrier <strong id="barrier-label">30%</strong></span><span>Health</span></div>
+          <details class="form-details"><summary>Staff & service capacity</summary><div class="details-content">
+            <div class="form-row"><label>Clinical staff<input type="number" name="staff_count" min="0" max="100" value="3" required></label><label>Clinical hours<input type="number" name="clinical_hours" min=".5" max="12" step=".5" value="4" required></label></div>
+            <label>Services per staff hour<input type="number" name="services_per_staff_hour" min=".1" max="100" step=".1" value="5" required></label>
+            <label>Equipment throughput<input type="number" name="equipment_limit" min="0" max="10000" value="120" required></label>
+            <label class="check-label"><input name="vehicle_available" type="checkbox" checked> Mobile vehicle available</label>
+            <label class="check-label"><input name="equipment_available" type="checkbox" checked> Screening equipment available</label>
+            <p class="muted small">Capacity is limited by staff, equipment, and clinical stations. It does not predict turnout.</p>
+          </div></details>
+          <details class="form-details"><summary>Simulation & policy settings</summary><div class="details-content">
+            <div class="form-row"><label>Seed<input type="number" name="seed" min="0" max="4294967295" value="2026" required></label><label>Scenarios<select name="simulations"><option value="1000">1,000</option><option value="5000">5,000</option><option value="10000">10,000</option></select></label></div>
+            <div class="form-row"><label>Top N<input type="number" name="top_n" min="1" max="30" value="3" required></label><label>Stable frequency<input type="number" name="robust_threshold" min="0" max="1" step=".05" value=".8" required></label></div>
+            <div class="form-row"><label>Weight lower bound<input type="number" name="weight_min" min="0" max="1" step=".05" value=".2" required></label><label>Weight upper bound<input type="number" name="weight_max" min="0" max="1" step=".05" value=".8" required></label></div>
+            <label>Dirichlet concentration<input type="number" name="concentration" min="1" max="1000" value="60" required></label>
+            <label>Travel variation<select name="travel_variation"><option value="0">Fixed road times</option><option value="0.1" selected>±10%</option><option value="0.2">±20%</option></select></label>
+            <label>Service-matched trend strength<select name="trend_strength"><option value="0">Off (default)</option><option value="0.1">0.10</option><option value="0.2">0.20</option></select></label>
+            <label class="check-label"><input name="block_weather" type="checkbox"> Exclude dates with a county-matched tornado warning</label>
+          </div></details>
+          <label>Operational inputs<select name="mode" id="mode"><option value="demo">Sample operations · demo</option><option value="confirmed">Planner-confirmed operations</option></select></label>
+          <button type="submit" class="button primary run-button" id="run-button">Generate recommendations <span aria-hidden="true">→</span></button>
+          <div id="run-status" class="muted small" role="status" aria-live="polite">Preparing the statewide workspace…</div>
+        </form>
+
+        <div class="analysis-panel">
+          <div id="metrics" class="metrics"><div><span class="metric-label">GEOGRAPHIC REACH</span><strong>—</strong><small>Adults newly within target</small></div><div><span class="metric-label">SERVICE CAPACITY</span><strong>—</strong><small>Possible screenings</small></div><div><span class="metric-label">FEASIBLE CANDIDATES</span><strong>—</strong><small>After operational checks</small></div></div>
+          <div class="map-panel">
+            <div class="map-toolbar"><div><h2>North Carolina priority map</h2><p id="map-subtitle" class="muted small">All 100 counties · statewide tract data</p></div><label class="map-layer-label">Map layer<select id="map-layer"><option value="priority">Community priority</option><option value="coverage">New access coverage</option><option value="baseline">Current verified access</option></select></label></div>
+            <div class="map-wrap" id="map-wrap"><svg id="state-map" viewBox="0 0 1000 420" role="img" aria-labelledby="map-title map-description"><title id="map-title">North Carolina outreach planning map</title><desc id="map-description">Census tracts shaded by priority, with candidate venues and verified baseline locations. The comparison table gives accessible plan details.</desc></svg><div id="map-tooltip" class="map-tooltip hidden"></div><div class="map-controls"><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-reset" aria-label="Fit North Carolina">⌂</button></div><div class="map-state-label">NORTH CAROLINA</div></div>
+            <div class="map-footer"><div class="map-legend"><span id="legend-label">Lower priority</span><span class="color-scale"></span><span id="legend-end">Higher priority</span><span class="legend-dot"></span><span>Recommended venue</span></div><span class="small muted">Census boundaries · approximate centroid journeys</span></div>
+          </div>
+          <div class="results-heading"><div><h2>Recommended plans <span id="result-count" class="muted"></span></h2><p id="result-explanation" class="muted small">Ranked by unique, need-weighted geographic coverage.</p></div><span id="version-badge" class="pill quiet">Awaiting first run</span></div>
+          <div id="recommendations" class="recommendation-grid"><div class="empty-state">Calculating road access and checking feasible event plans…</div></div>
+        </div>
+      </div>
+      <section id="schedule-section" class="content-panel hidden"></section>
+      <section id="comparison" class="content-panel hidden"></section>
+      <section id="changes" class="content-panel hidden"></section>
+      <section id="tract-inspector" class="content-panel hidden"></section>
+      <details class="content-panel excluded-panel"><summary id="excluded-title">Excluded candidates & assumptions</summary><div id="exclusions"></div></details>
+    </section>
+
+    <section id="venues-view" class="view hidden"></section>
+    <section id="conditions-view" class="view hidden"></section>
+    <section id="history-view" class="view hidden"></section>
+    <section id="outcomes-view" class="view hidden"></section>
+    <section id="methods-view" class="view hidden"></section>
+  </main>
+  <dialog id="venue-dialog"><form id="venue-form"><h2 id="venue-dialog-title">Review venue</h2><p class="small muted" id="venue-dialog-context"></p><input name="venue_id" type="hidden"><div id="venue-checks"></div><div class="form-row"><label>Cost, USD<input name="cost" type="number" min="0" max="1000000" required></label><label>Clinical station throughput<input name="space_throughput" type="number" min="0" max="10000" required></label></div><label>Available dates (semicolon separated)<input name="available_dates" placeholder="2026-10-20;2026-10-21"></label><div class="form-row"><label>Confirmed by<input name="verified_by" maxlength="100"></label><label>Verification date<input name="verified_at" type="date"></label></div><div class="dialog-actions"><button type="button" class="button secondary" id="close-venue">Cancel</button><button type="submit" class="button primary">Save & replan</button></div></form></dialog>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "source": "https://router.project-osrm.org",
+  "profile": "driving",
+  "retrieved_at": "2026-10-10T17:08:07.548479+00:00",
+  "tract_point": "CDC geometric centroid; approximate resident journeys",
+  "live_closure_aware": false,
+  "unknown_routes": 0,
+  "shape": [
+    2647,
+    57
+  ],
+  "sha256": "ac08d9a95676f58b7c172edd9371782b9498306ffa33452fea67efcd493a9138"
+}
