@@ -6,3 +6,5 @@ __pycache__/
 data/snapshots/*.zip
 data/snapshots/routes/
 
+.env
+bot/node_modules/
