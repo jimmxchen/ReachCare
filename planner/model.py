@@ -17,6 +17,31 @@ SERVICES = {
         "eligible_group": "Adults 18 and older", "benchmark": [15, 55],
         "minimum_staff": 2, "equipment": "Blood-pressure monitors",
         "interpretation": "Modeled diagnosed prevalence is a geographic priority proxy; it does not estimate undiagnosed patients or screening demand.",
+        "short_label": "High blood pressure",
+    },
+    "diabetes": {
+        "name": "Diabetes screening", "indicator": "diabetes",
+        "indicator_label": "Adults reporting diagnosed diabetes",
+        "eligible_group": "Adults 18 and older", "benchmark": [4, 24],
+        "minimum_staff": 2, "equipment": "Glucose meters or A1C analyzers",
+        "interpretation": "Modeled diagnosed prevalence is a geographic priority proxy; it does not estimate undiagnosed patients or screening demand.",
+        "short_label": "Diabetes",
+    },
+    "copd": {
+        "name": "COPD and lung-health screening", "indicator": "copd",
+        "indicator_label": "Adults reporting diagnosed COPD",
+        "eligible_group": "Adults 18 and older", "benchmark": [2, 15],
+        "minimum_staff": 2, "equipment": "Handheld spirometers",
+        "interpretation": "Modeled diagnosed prevalence is a geographic priority proxy; it does not estimate undiagnosed patients or screening demand.",
+        "short_label": "COPD",
+    },
+    "asthma": {
+        "name": "Asthma care and education", "indicator": "casthma",
+        "indicator_label": "Adults reporting current asthma",
+        "eligible_group": "Adults 18 and older", "benchmark": [8.5, 14.5],
+        "minimum_staff": 2, "equipment": "Peak-flow meters and inhaler demonstration kits",
+        "interpretation": "Modeled current-asthma prevalence is a geographic priority proxy; it does not estimate care need or demand.",
+        "short_label": "Asthma",
     },
 }
 
