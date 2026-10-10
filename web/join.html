@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ReachCare</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .join{display:grid;grid-template-columns:minmax(320px,5fr) minmax(0,7fr);gap:96px;padding:72px 0 80px;align-items:start}
+    .join .side{position:sticky;top:112px;max-width:520px}
+    .join h1{font-size:clamp(32px,3.4vw,48px)}
+    .join .lead{margin-top:20px}
+    .join form,.join .done,.join #error{max-width:760px}
+    .join form{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+    .join form .full{grid-column:1/-1}
+    .checks{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-top:8px}
+    .checks label{display:flex;gap:10px;align-items:center;font-size:15px;color:var(--ink);margin:0;font-weight:400}
+    .consent{font-size:13px;color:var(--muted);line-height:1.5}
+    .done{padding:20px;border:1px solid var(--line);border-radius:4px;background:var(--soft)}
+    .done h2{font-size:20px;margin-bottom:6px}
+    @media (max-width:1000px){.join{grid-template-columns:1fr;gap:32px;padding-top:40px}.join .side{position:static}.join form{grid-template-columns:1fr}.checks{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="/"><img src="/reach-mark.png" alt="" width="30" height="33"><span>ReachCare</span></a><nav aria-label="Primary"><a href="/#/plan" data-nav="plan">Plan a clinic</a><a href="/#/docs" data-nav="docs">How it works</a><a href="/bot.html">Ask ReachCare</a><a href="/join.html" aria-current="page">Get alerts</a></nav></header>
+  <main>
+    <div class="join">
+      <div class="side">
+        <p class="eyebrow">Free clinic alerts</p>
+        <h1>Get a text when a free clinic is near you</h1>
+        <p class="lead">Sign up with your mobile number and we'll text you when a free health clinic is scheduled in your area. You can also text us questions or send a voice note in any language.</p>
+      </div>
+      <div class="panel">
+      <div id="error" class="notice error hidden" role="alert"></div>
+
+      <form id="join" novalidate>
+        <label>First name<input name="name" type="text" maxlength="40" autocomplete="given-name" required></label>
+        <label>Mobile number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(919) 555-0123" required></label>
+        <label>City or ZIP code in North Carolina<input name="place" type="text" autocomplete="address-level2" placeholder="e.g. Durham or 27701" required></label>
+        <fieldset class="group full" style="border-top:0;padding:0;margin:0">
+          <legend style="float:none;margin:0 0 4px;text-transform:none;letter-spacing:0;font-size:13px;font-weight:500;color:var(--muted)">What are you interested in?</legend>
+          <div class="checks" id="services"></div>
+        </fieldset>
+        <label>Language for our texts
+          <select name="language">
+            <option value="eng">English</option><option value="spa">Español</option><option value="fra">Français</option>
+            <option value="por">Português</option><option value="vie">Tiếng Việt</option><option value="zho">中文</option>
+            <option value="ara">العربية</option><option value="hin">हिन्दी</option><option value="kor">한국어</option>
+            <option value="rus">Русский</option><option value="hat">Kreyòl ayisyen</option>
+          </select>
+        </label>
+        <label class="check consent full"><input type="checkbox" name="consent" required>
+          <span>I agree to receive text messages from ReachCare about free clinics near me. Message and data rates may apply. Reply STOP at any time to unsubscribe.</span></label>
+        <div class="actions full"><button type="submit" class="button primary" id="submit"><span id="label">Sign me up</span></button></div>
+      </form>
+
+      <div id="success" class="done hidden" role="status">
+        <h2>You're signed up</h2>
+        <p id="success-text"></p>
+      </div>
+      </div>
+    </div>
+  </main>
+  <script>
+    const form = document.getElementById('join'), err = document.getElementById('error');
+    const names = {'blood-pressure': 'Blood-pressure screening', diabetes: 'Diabetes screening', copd: 'COPD and lung health', asthma: 'Asthma care'};
+    const box = document.getElementById('services');
+    Object.entries(names).forEach(([k, v]) => {
+      const l = document.createElement('label'), i = document.createElement('input');
+      i.type = 'checkbox'; i.name = 'services'; i.value = k; i.checked = true;
+      l.append(i, document.createTextNode(v)); box.append(l);
+    });
+    form.addEventListener('submit', async e => {
+      e.preventDefault(); err.classList.add('hidden');
+      const f = new FormData(form), btn = document.getElementById('submit'), label = document.getElementById('label');
+      btn.disabled = true; label.textContent = 'Signing you up…';
+      try {
+        const r = await fetch('/api/signup', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+          name: f.get('name'), phone: f.get('phone'), place: f.get('place'), language: f.get('language'),
+          services: f.getAll('services'), consent: form.consent.checked})});
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || 'Something went wrong. Please try again.');
+        form.classList.add('hidden');
+        document.getElementById('success-text').textContent =
+          `We'll text ${d.phone} when a free clinic is scheduled near ${d.place.replace(', USA', '')}. You'll get a welcome text in a moment. Reply STOP anytime to unsubscribe.`;
+        document.getElementById('success').classList.remove('hidden');
+      } catch (ex) { err.textContent = ex.message; err.classList.remove('hidden'); }
+      finally { btn.disabled = false; label.textContent = 'Sign me up'; }
+    });
+  </script>
+</body>
+</html>
