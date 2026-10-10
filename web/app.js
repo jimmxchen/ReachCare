@@ -1,131 +1,412 @@
 const $ = (s, p = document) => p.querySelector(s);
-const $$ = (s, p = document) => [...p.querySelectorAll(s)];
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt = v => new Intl.NumberFormat('en-US', {maximumFractionDigits:0}).format(Math.round(v ?? 0) || 0);
-const money = v => new Intl.NumberFormat('en-US', {style:'currency',currency:'USD',maximumFractionDigits:0}).format(v ?? 0);
-const pct = v => `${((v ?? 0)*100).toFixed(1)}%`;
-const when = v => v ? new Date(v).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : 'Not fetched';
-const day = v => v ? new Date(`${v}T12:00:00`).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
-let boot, geometry, result, config={}, selectedSite, activeView='planner', busy=false;
-let overrides={}, excludedServices=[], mapZoom=1;
-const form = $('#campaign-form');
-const numeric = ['travel_target','events','budget','staff_count','services_per_staff_hour','clinical_hours','equipment_limit','health_weight','seed','simulations','top_n','robust_threshold','weight_min','weight_max','concentration','travel_variation','trend_strength'];
-const labels = {planner:'Campaign planner',venues:'Venues & care',conditions:'Live conditions',history:'Run history',outcomes:'Event outcomes',methods:'Data & methods'};
-const titles = {planner:'Blood-pressure screening',venues:'Verify the places behind the plan',conditions:'Conditions on the ground',history:'Every decision, preserved',outcomes:'Learn from each outreach event',methods:'See what shapes the recommendation'};
-async function api(path,body){const r=await fetch(path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw new Error(data.error||'Request could not complete');return data;}
-function notice(message,error=false){$('#notice').textContent=message;$('#notice').classList.remove('hidden');$('#notice').classList.toggle('error',error);}
-function readConfig(){const values=Object.fromEntries(new FormData(form));numeric.forEach(k=>values[k]=Number(values[k]));['vehicle_available','equipment_available'].forEach(k=>values[k]=form.elements[k].checked);values.weather_block_events=form.elements.block_weather.checked?['Tornado Warning']:[];delete values.block_weather;return {...config,...values,venue_overrides:structuredClone(overrides),excluded_services:[...excludedServices]};}
-function populate(values){config={...values};Object.entries(values).forEach(([k,v])=>{const e=form.elements[k];if(e){if(e.type==='checkbox')e.checked=v;else e.value=v;}});form.elements.block_weather.checked=(values.weather_block_events||[]).includes('Tornado Warning');overrides=structuredClone(values.venue_overrides||{});excludedServices=[...(values.excluded_services||[])];updateWeights();updateMode();}
-function updateWeights(){const w=Number(form.elements.health_weight.value);$('#weight-label').textContent=`${Math.round(w*100)}%`;$('#barrier-label').textContent=`${Math.round((1-w)*100)}%`;}
-function updateMode(){const demo=form.elements.mode.value==='demo';$('#mode-badge').textContent=demo?'Demo operations':'Confirmed inputs';$('#mode-badge').className=`pill ${demo?'demo':'quiet'}`;$('#demo-banner').classList.toggle('hidden',!demo);}
-async function generate(reason='Planner configuration updated'){
- if(busy||!form.reportValidity())return;
- busy=true;const b=$('#run-button');b.disabled=true;b.classList.add('busy');b.innerHTML='Calculating scenarios <span class="loading-line" aria-hidden="true"></span>';
- $('#run-status').textContent='Checking constraints, road access, and seeded sensitivity…';$('#notice').classList.add('hidden');
- try{config=readConfig();result=await api('/api/runs',{config,change_reason:reason});config=result.config;selectedSite=result.recommendations[0]?.site.id;renderResults();boot.runs=await api('/api/runs');$('#run-status').textContent=`Version ${result.version} saved · seed ${config.seed} · ${fmt(result.simulation_design.draws)} scenarios`;if(activeView!=='planner')renderView(activeView);}
- catch(e){notice(e.message,true);$('#run-status').textContent='Adjust the inputs and try again. Earlier runs remain available.';}
- finally{busy=false;b.disabled=false;b.classList.remove('busy');b.innerHTML='Generate recommendations <span aria-hidden="true">→</span>';}
-}
-function planCard(r){return `<button class="plan-card ${selectedSite===r.site.id?'selected':''}" data-site="${esc(r.site.id)}" aria-pressed="${selectedSite===r.site.id}"><div class="rank-row"><span class="rank-number">${String(r.rank).padStart(2,'0')} / RECOMMENDATION</span><span class="pill ${r.robust?'robust':'uncertain'}">${r.robust?'Robust alternative':'Review sensitivity'}</span></div><h3>${esc(r.site.name)}</h3><div class="location">${esc(r.site.city)} · ${esc(r.site.county)} County</div><div class="card-score"><span>Coverage score</span><strong>${fmt(r.score)}</strong></div><div class="card-facts"><span>Adults reached<strong>${fmt(r.approx_population_in_newly_covered_tracts)}</strong></span><span>Clinical capacity<strong>${r.event_capacity}</strong></span><span>Newly covered tracts<strong>${r.newly_covered_tracts.length}</strong></span><span>Estimated cost<strong>${money(r.estimated_cost)}</strong></span></div><div class="stability"><span>Top ${config.top_n} stability</span><strong>${pct(r.top_n_frequency)}</strong></div></button>`;}
-function renderResults(){
- if(!result)return;const top=result.recommendations.slice(0,3);
- $('#metrics').innerHTML=`<div><span class="metric-label">GEOGRAPHIC REACH</span><strong>${fmt(result.schedule_population)}</strong><small>Adults newly within ${config.travel_target} min</small></div><div><span class="metric-label">SERVICE CAPACITY</span><strong>${fmt(result.schedule_capacity)}</strong><small>Possible screenings · turnout unknown</small></div><div><span class="metric-label">FEASIBLE CANDIDATES</span><strong>${result.candidates}<span style="font-size:13px;color:#899787"> / ${boot.venues.length}</span></strong><small>${result.excluded.length} excluded by constraints</small></div>`;
- $('#result-count').textContent=top.length?`Top ${top.length}`:'';$('#version-badge').textContent=`Analysis v${result.version}`;
- $('#result-explanation').textContent=`${result.decision} · deterministic score order · ${fmt(config.simulations)} seeded scenarios`;
- $('#map-subtitle').textContent=`${result.scope.region} · ${fmt(result.scope.tracts)} tracts · ${result.scope.counties} counties`;
- $('#recommendations').innerHTML=top.length?top.map(planCard).join(''):`<div class="empty-state"><strong>${esc(result.decision)}</strong><br>Review host approvals, dates, staff, equipment, and verified baseline care in Venues & care. Unknown baseline access is excluded from confirmed new-coverage metrics.</div>`;
- $$('.plan-card').forEach(c=>c.onclick=()=>selectSite(c.dataset.site));
- $('#excluded-title').textContent=`${result.excluded.length} excluded candidates & planning assumptions`;
- $('#exclusions').innerHTML=result.excluded.map(e=>`<div class="exclusion-row"><div><strong>${esc(e.name)}</strong><span class="muted">${esc(e.county)} County</span></div><span class="reason">${e.reasons.map(esc).join(' · ')}</span></div>`).join('')+`<ul class="warning-list">${result.warnings.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`;
- $('#schedule-section').classList.remove('hidden');
- $('#schedule-section').innerHTML=`<h2>${config.events>1?'A schedule with unique geographic coverage':'Proposed event'}</h2><p class="small muted">${esc(result.optimizer||'No feasible selection')}.</p><div class="schedule-summary"><span>Unique geographic reach<strong>${fmt(result.schedule_population)} adults</strong></span><span>Weighted coverage<strong>${fmt(result.schedule_score)}</strong></span><span>Total cost<strong>${money(result.schedule_cost)}</strong></span><span>Service capacity<strong>${fmt(result.schedule_capacity)} screenings</strong></span></div>${result.schedule.length?`<div class="table-scroll"><table><thead><tr><th>Venue</th><th>Proposed date</th><th>Additional score</th><th>Capacity</th><th>Cost</th></tr></thead><tbody>${result.schedule.map(s=>`<tr><td>${esc(s.name)}</td><td>${day(s.date)}</td><td>${fmt(s.incremental_score)}</td><td>${s.event_capacity}</td><td>${money(s.cost)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="small muted">No plan has confirmed new access gain under these inputs.</p>'}<p class="source-hint">${config.mode==='demo'?'Dates and confirmations are samples. ':''}Human approval is required before scheduling. Geographic reach is not expected attendance.</p>`;
- renderComparison(top);renderChanges();renderMap();$('#export-json').disabled=false;$('#export-brief').disabled=false;
-}
-function selectSite(id){selectedSite=id;$$('.plan-card').forEach(c=>{c.classList.toggle('selected',c.dataset.site===id);c.setAttribute('aria-pressed',c.dataset.site===id);});renderMap();}
-function renderComparison(top){
- $('#comparison').classList.toggle('hidden',!top.length);if(!top.length)return;
- const row=(label,fn)=>`<tr><th scope="row">${label}</th>${top.map(r=>`<td>${fn(r)}</td>`).join('')}</tr>`;
- $('#comparison').innerHTML=`<h2>Why these plans rank here</h2><p class="small muted">Eligible population × policy priority for tracts moved within the travel target. Capacity and cost are shown separately.</p><div class="table-scroll"><table><thead><tr><th>Measure</th>${top.map(r=>`<th>${esc(r.site.name)}</th>`).join('')}</tr></thead><tbody>${row('Deterministic score',r=>`<strong>${fmt(r.score)}</strong>`)}${row('Health contribution',r=>fmt(r.score_components.health))}${row('Transport contribution',r=>fmt(r.score_components.transport))}${row('Historical trend contribution',r=>fmt(r.score_components.trend))}${row('Geographic reach · adults',r=>fmt(r.approx_population_in_newly_covered_tracts))}${row('Clinical capacity · screenings',r=>fmt(r.event_capacity))}${row('Capacity limits',r=>`Staff ${r.clinical_throughput} · equipment ${r.equipment_throughput} · stations ${r.space_throughput}`)}${row('Expected attendance',()=> 'Unavailable · no calibrated history')}${row(`Top ${config.top_n} frequency`,r=>pct(r.top_n_frequency))}${row('First-place frequency',r=>pct(r.first_frequency))}${row('Median rank',r=>r.median_rank)}${row('Average regret · score units',r=>fmt(r.average_regret))}${row('Worst declared stress regret',r=>fmt(r.worst_case_regret))}${row('Broader weight sensitivity',r=>pct(r.broader_top_n_frequency))}${row('Open confirmations',r=>r.open_checks.map(esc).join('<br>'))}</tbody></table></div><p class="source-hint">Top-N frequency describes stability under saved scenarios. It is not the probability of patient turnout. Near ties deserve review.</p>`;
-}
-function renderChanges(){const c=result.comparison;$('#changes').classList.toggle('hidden',!c);if(!c)return;$('#changes').innerHTML=`<h2>What changed from version ${c.previous_version}</h2><p class="small muted">${esc(result.change_reason)}</p><div class="schedule-summary"><span>Weighted score change<strong>${c.score_change>=0?'+':''}${fmt(c.score_change)}</strong></span><span>Reach change<strong>${c.population_change>=0?'+':''}${fmt(c.population_change)} adults</strong></span></div><div class="table-scroll"><table><thead><tr><th>Venue</th><th>Previous rank</th><th>Current rank</th><th>Score change</th></tr></thead><tbody>${c.site_changes.map(s=>`<tr><td>${esc(s.name)}</td><td>${s.previous_rank??'Newly feasible'}</td><td>${s.current_rank}</td><td>${s.score_change>=0?'+':''}${fmt(s.score_change)}</td></tr>`).join('')}</tbody></table></div>${c.removed_sites.length?`<p class="source-hint">Excluded: ${c.removed_sites.map(esc).join(', ')}.</p>`:''}<button class="text-button" id="open-prior">Inspect version ${c.previous_version} →</button>`;$('#open-prior').onclick=()=>loadRun(c.previous_id);}
+const fmt = v => new Intl.NumberFormat('en-US').format(Math.round(v || 0));
+const NS = 'http://www.w3.org/2000/svg';
+const MILES_PER_MINUTE = 0.58; // keep in sync with planner/siting.py
+const LAT0 = 35.2, KX = Math.cos(LAT0 * Math.PI / 180), SCALE = 118; // px per degree of latitude
+const LON_MIN = -84.4, LAT_MAX = 36.62;
+const W = 1000, H = 380;
+const project = (lon, lat) => [(lon - LON_MIN) * KX * SCALE, (LAT_MAX - lat) * SCALE];
+const unproject = (x, y) => [LON_MIN + x / (KX * SCALE), LAT_MAX - y / SCALE];
+const milesToPx = miles => miles / 69.09 * SCALE;
 
-const project=(lon,lat)=>[(lon+84.6)*100+35,(36.7-lat)*125+20];
-const ns='http://www.w3.org/2000/svg';let mapBuilt=false,tractById,runTracts;
-function renderMap(){
- if(!geometry||!boot)return;const svg=$('#state-map');tractById ||= new Map(boot.tracts.map(t=>[t.id,t]));runTracts=new Map((result?.tract_details||[]).map(t=>[t.id,t]));
- if(!mapBuilt){const group=document.createElementNS(ns,'g');group.id='tract-paths';geometry.features.forEach(f=>{const p=document.createElementNS(ns,'path');p.dataset.tract=f.properties.id;p.setAttribute('d',f.geometry.coordinates.map(r=>r.map(([lon,lat],i)=>`${i?'L':'M'}${project(lon,lat).map(v=>v.toFixed(2)).join(',')}`).join('')+'Z').join(''));p.setAttribute('fill-rule','evenodd');p.setAttribute('stroke','#f4f7ed');p.setAttribute('stroke-width','.3');p.onpointerenter=e=>tooltip(f.properties.id,e);p.onpointermove=positionTooltip;p.onpointerleave=()=>$('#map-tooltip').classList.add('hidden');p.onclick=()=>inspectTract(f.properties.id);group.append(p);});svg.append(group);const markers=document.createElementNS(ns,'g');markers.id='site-markers';svg.append(markers);mapBuilt=true;}
- const layer=$('#map-layer').value, selected=result?.recommendations.find(r=>r.site.id===selectedSite),covered=new Set(layer==='coverage'?selected?.newly_covered_tracts||result?.selected_tracts||[]:[]);
- $$('#tract-paths path').forEach(p=>{const t=tractById.get(p.dataset.tract),d=runTracts.get(p.dataset.tract);let color='#e4e9df';if(t&&(!result||config.region==='NC'||config.region===t.county_id)){if(layer==='coverage')color=covered.has(t.id)?'#438b6d':'#dbe6d7';else if(layer==='baseline')color=d?.baseline_minutes==null?'#c6ccbc':d.baseline_minutes<=config.travel_target?'#70a887':'#e7d2ad';else{const q=d?.priority??(t.indicators.bphigh.value==null||t.no_vehicle_pct==null?null:.7*Math.max(0,Math.min(1,(t.indicators.bphigh.value-15)/40))+.3*Math.max(0,Math.min(1,t.no_vehicle_pct/20)));color=q==null?'#c6ccbc':['#dfe9cb','#c3dcb2','#a0c798','#75af81','#4a9168','#216750'][Math.min(5,Math.floor(q*6))];}}p.setAttribute('fill',color);});
- $('#legend-label').textContent=layer==='coverage'?'Outside new coverage':layer==='baseline'?'Within target':'Lower priority';$('#legend-end').textContent=layer==='coverage'?'New access gain':layer==='baseline'?'Outside / unknown':'Higher priority';
- const markers=$('#site-markers');markers.replaceChildren();boot.venues.forEach(v=>{const r=result?.recommendations.slice(0,3).find(r=>r.site.id===v.id),[x,y]=project(v.lon,v.lat),g=document.createElementNS(ns,'g'),c=document.createElementNS(ns,'circle');[['cx',x],['cy',y],['r',r?v.id===selectedSite?10:8:3],['fill',r?'#bd8a46':'#476f59'],['stroke','white'],['stroke-width',r?2:1]].forEach(([k,val])=>c.setAttribute(k,val));g.append(c);const title=document.createElementNS(ns,'title');title.textContent=v.name;g.append(title);if(r){const text=document.createElementNS(ns,'text');[['x',x],['y',y+3.5],['text-anchor','middle'],['fill','white'],['font-size',10],['font-weight',650]].forEach(([k,val])=>text.setAttribute(k,val));text.textContent=r.rank;g.append(text);g.style.cursor='pointer';g.onclick=()=>{selectSite(v.id);$('#map-layer').value='coverage';renderMap();};}markers.append(g);});
- if(layer==='baseline')boot.existing_services.forEach(s=>{if(!result?.tract_details.some(t=>t.baseline_site===s.id))return;const[x,y]=project(s.lon,s.lat),c=document.createElementNS(ns,'path');c.setAttribute('d',`M${x-3},${y}h6M${x},${y-3}v6`);c.setAttribute('stroke','#193f3b');c.setAttribute('stroke-width',2);const title=document.createElementNS(ns,'title');title.textContent=s.name;c.append(title);markers.append(c);});applyZoom();
-}
-function applyZoom(){const w=1000/mapZoom,h=420/mapZoom;$('#state-map').setAttribute('viewBox',`${(1000-w)/2} ${(420-h)/2} ${w} ${h}`);}
-function tooltip(id,event){const t=tractById.get(id),d=runTracts.get(id);if(!t)return;$('#map-tooltip').innerHTML=`<strong>${esc(t.county)} · tract ${esc(id.slice(5))}</strong>Adult population: ${fmt(t.eligible_population)}<br>High blood pressure: ${t.indicators.bphigh.value??'Unknown'}%<br>No-vehicle households: ${t.no_vehicle_pct?.toFixed(1)??'Unknown'}%<br>Baseline: ${d?.baseline_minutes==null?'Unknown':`${d.baseline_minutes.toFixed(1)} minutes`}<br><span class="muted">Click to inspect sources and access</span>`;$('#map-tooltip').classList.remove('hidden');positionTooltip(event);}
-function positionTooltip(event){const rect=$('#map-wrap').getBoundingClientRect(),t=$('#map-tooltip');t.style.left=`${Math.max(5,Math.min(event.clientX-rect.left+12,rect.width-240))}px`;t.style.top=`${Math.max(5,Math.min(event.clientY-rect.top-20,rect.height-150))}px`;}
-function inspectTract(id){const t=tractById.get(id),d=runTracts.get(id);if(!t)return;const p=$('#tract-inspector'),h=t.indicators.bphigh;p.classList.remove('hidden');p.innerHTML=`<h2>${esc(t.county)} County · tract ${esc(id)}</h2><div class="inspector-grid"><span>Adult population<strong>${fmt(t.eligible_population)}</strong></span><span>High blood pressure · modeled<strong>${h.value??'Unknown'}%</strong></span><span>No-vehicle households<strong>${t.no_vehicle_pct?.toFixed(1)??'Unknown'}%</strong></span><span>Closest verified baseline<strong>${d?.baseline_minutes==null?'Unknown':`${d.baseline_minutes.toFixed(1)} min`}</strong></span></div><p class="small muted">${esc(d?.baseline_name||'No verified relevant baseline with a known route.')} ${config.mode==='demo'?'Service verification is a sample assumption.':''}</p><p class="source-hint">CDC PLACES 2025 · 95% interval ${h.lower??'—'}–${h.upper??'—'}%. ACS 2020–2024 adult population MOE ±${fmt(t.population_moe)} (approximate); transport MOE ±${t.no_vehicle_moe?.toFixed(1)??'—'} percentage points. Centroid ${t.lat.toFixed(5)}, ${t.lon.toFixed(5)}; journeys are approximate.</p>`;p.scrollIntoView({behavior:'smooth',block:'nearest'});}
+const form = $('#plan-form');
+let place = null, options, tracts = [], tractPaths = new Map(), landPath = '', lastPlan = null;
 
-function showView(view){activeView=view;$$('.view').forEach(v=>v.classList.toggle('hidden',v.id!==`${view}-view`));$$('.nav-item').forEach(b=>{b.classList.toggle('active',b.dataset.view===view);b.setAttribute('aria-current',b.dataset.view===view?'page':'false');});$('#view-name').textContent=labels[view];$('#page-title').textContent=titles[view];$('#page-subtitle').textContent={planner:'Find feasible places to bring care closer, from the mountains to the coast.',venues:'Public locations become schedulable after host and hospital verification.',conditions:'Weather and road signals inform operational review; snapshots remain available.',history:'Inspect the exact inputs and results from earlier planning runs.',outcomes:'Capture aggregate services and follow-ups without changing prior recommendations.',methods:'Public sources, fixed benchmarks, feasibility rules, and sensitivity assumptions.'}[view];if(view!=='planner')renderView(view);}
-function renderView(view){if(!boot)return;({venues:renderVenues,conditions:renderConditions,history:renderHistory,outcomes:renderOutcomes,methods:renderMethods}[view]||(()=>{}))();}
-const csvFields={venues:['id','details_verified','host_approved','accessible','private_space','power','available','cost','space_throughput','available_dates','verified_by','verified_at'],services:['id','service','service_verified','eligibility_verified','schedule_verified','schedule_start','schedule_end','verified_by','verified_at'],series:['signal','service','geography_type','geography_id','period_start','period_end','value','denominator','unit','baseline_rate','published_at','source','provisional','suppressed','revision_id']};
-const toCSV=(fields,rows)=>fields.join(',')+'\n'+rows.map(r=>fields.map(k=>'"'+String(r[k]??'').replaceAll('"','""')+'"').join(',')).join('\n');
-function download(name,text,type='text/csv'){const url=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-function importToolbar(kind,label){return `<div class="inline-actions"><button class="button secondary" data-template="${kind}">↓ ${label} CSV template</button><label class="button secondary file-label">↑ Import ${label.toLowerCase()} CSV<input type="file" accept=".csv,text/csv" data-import="${kind}" aria-label="Import ${label} CSV"></label></div>`;}
-function bindImports(parent){$$('[data-template]',parent).forEach(b=>b.onclick=()=>{const k=b.dataset.template,rows=k==='venues'?boot.venues.map(v=>({id:v.id})):k==='services'?boot.existing_services.map(s=>({id:s.id,service:'blood-pressure'})):[];download(`${k}-template.csv`,toCSV(csvFields[k],rows));});$$('[data-import]',parent).forEach(input=>input.onchange=async()=>{if(!input.files[0])return;try{const r=await api('/api/import',{kind:input.dataset.import,csv:await input.files[0].text()});if(r.errors.length)throw new Error(r.errors.map(e=>`Row ${e.row??'—'}: ${e.error}`).join('; '));await reloadInputs();await generate(`${input.dataset.import} CSV imported: ${r.imported} rows`);notice(`${r.imported} rows imported and a new planning run saved.`);renderView(activeView);}catch(e){notice(e.message,true);}input.value='';});}
-async function reloadInputs(){const fresh=await api('/api/bootstrap');boot.venue_operations=fresh.venue_operations;boot.existing_services=fresh.existing_services;boot.series=fresh.series;}
+function show(msg) { const e = $('#error'); e.textContent = msg; e.classList.toggle('hidden', !msg); if (msg) e.scrollIntoView({block: 'nearest'}); }
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Request could not complete');
+  return data;
+}
+function el(name, attrs = {}, parent) {
+  const n = document.createElementNS(NS, name);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  parent?.appendChild(n);
+  return n;
+}
+const ringPath = ring => ring.map(([lon, lat], i) => { const [x, y] = project(lon, lat); return `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`; }).join('') + 'Z';
 
-function renderVenues(){
- const parent=$('#venues-view'),ops=config.mode==='demo'?boot.demo_operations:boot.venue_operations,failures=new Map((result?.excluded||[]).map(v=>[v.id,v]));
- parent.innerHTML=`<div class="content-panel"><div class="toolbar"><h2>Candidate venues <span class="chip-count">${boot.venues.length} routed candidates</span></h2>${importToolbar('venues','Venue')}</div><p class="venue-help">30 libraries form a geographically distributed statewide shortlist. Hosts must confirm dates, accessibility, privacy, power, and clinical station throughput. ${config.mode==='demo'?'Current operations are sample inputs.':'Only dated planner verifications qualify for confirmed plans.'}</p><div class="toolbar"><input type="search" id="venue-search" placeholder="Search venue, city, or county" aria-label="Search venues"><button class="text-button" id="show-prospects">Statewide directory context →</button></div><div class="table-scroll"><table><thead><tr><th>Venue</th><th>County</th><th>Operational status</th><th>Cost</th><th>Review</th></tr></thead><tbody id="venue-rows">${boot.venues.map(v=>{const o={...(ops[v.id]||{}),...(overrides[v.id]||{})},e=failures.get(v.id);return `<tr data-search="${esc(`${v.name} ${v.city} ${v.county}`.toLowerCase())}"><td><strong>${esc(v.name)}</strong><span class="muted">${esc(v.address)}, ${esc(v.city)}</span></td><td>${esc(v.county)}</td><td><span class="pill ${e?'uncertain':'quiet'}">${e?'Needs review':config.mode==='demo'?'Sample feasible':'Verified input'}</span><span class="muted">${esc(e?.reasons.join(' · ')||'Event approval pending')}</span></td><td>${o.cost==null?'Unknown':money(o.cost)}</td><td><button class="action-small" data-venue="${esc(v.id)}">Review</button></td></tr>`;}).join('')}</tbody></table></div><div id="prospecting-info" class="readiness-warning hidden" style="margin-top:18px">The full FY2024 NC library directory is preserved in data/nc.json. Additional venues need a rebuilt road matrix before optimization. Unrouted records remain prospects.</div></div><div class="content-panel"><div class="toolbar"><h2>Existing care · baseline verification</h2>${importToolbar('services','Service')}</div><p class="venue-help">The directory does not establish blood-pressure screening, adult eligibility, or operating dates. ${config.mode==='demo'?'Care relevance is assumed for the demo.':'Verify the service before it contributes to baseline access.'} Excluding a provider creates a new run.</p><div class="table-scroll"><table><thead><tr><th>Care location</th><th>Verification</th><th>Use in baseline</th><th>Review</th></tr></thead><tbody>${boot.existing_services.map(s=>{const verified=['service_verified','eligibility_verified','schedule_verified'].every(k=>s[k]);return `<tr><td><strong>${esc(s.name)}</strong><span class="muted">${esc(s.type)} · ${esc(s.county)} County</span></td><td>${config.mode==='demo'?'Sample relevance':verified?'Planner verified':'Unknown service / eligibility / schedule'}<span class="muted">${esc(s.verified_at||'No real verification date')}</span></td><td><input type="checkbox" data-care="${esc(s.id)}" ${excludedServices.includes(s.id)?'':'checked'} aria-label="Include ${esc(s.name)} in relevant baseline"></td><td><button class="action-small" data-verify-care="${esc(s.id)}">Verify</button></td></tr>`;}).join('')}</tbody></table></div></div>`;
- $('#venue-search').oninput=e=>$$('#venue-rows tr').forEach(r=>r.classList.toggle('hidden',!r.dataset.search.includes(e.target.value.toLowerCase())));
- $('#show-prospects').onclick=()=>$('#prospecting-info').classList.toggle('hidden');
- $$('[data-venue]',parent).forEach(b=>b.onclick=()=>openVenue(b.dataset.venue));
- $$('[data-care]',parent).forEach(input=>input.onchange=async()=>{excludedServices=input.checked?excludedServices.filter(id=>id!==input.dataset.care):[...new Set([...excludedServices,input.dataset.care])];await generate(`Baseline provider ${input.checked?'included':'excluded'}: ${boot.existing_services.find(s=>s.id===input.dataset.care).name}`);});
- $$('[data-verify-care]',parent).forEach(b=>b.onclick=()=>openCare(b.dataset.verifyCare));bindImports(parent);
+// ---------- Routing ----------
+function route() {
+  if ($('#results').open) $('#results').close();
+  const docs = location.hash.startsWith('#/docs');
+  $('#plan-view').classList.toggle('hidden', docs);
+  $('#docs-view').classList.toggle('hidden', !docs);
+  document.querySelectorAll('[data-nav]').forEach(a => {
+    if (a.dataset.nav === (docs ? 'docs' : 'plan')) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  });
+  if (docs && !$('#docs-view').innerHTML) renderDocs();
+  document.title = 'ReachCare';
+  window.scrollTo(0, 0);
 }
-function openVenue(id){const venue=boot.venues.find(v=>v.id===id),op={...((config.mode==='demo'?boot.demo_operations:boot.venue_operations)[id]||{}),...(overrides[id]||{})},f=$('#venue-form');$('#venue-dialog-title').textContent=venue.name;$('#venue-dialog-context').textContent=config.mode==='demo'?'Changes apply to sample operations and produce a new demo run.':'Record host-confirmed facts and a verification date. Unknown requirements remain unschedulable.';const checks={details_verified:'Venue details',host_approved:'Host approved',accessible:'Accessible entrance',private_space:'Private clinical space',power:'Power available',available:'Venue available'};$('#venue-checks').innerHTML=Object.entries(checks).map(([k,l])=>`<label>${l}<select name="${k}"><option value="">Unknown</option><option value="true">Confirmed</option><option value="false">Unavailable / declined</option></select></label>`).join('');f.elements.venue_id.value=id;Object.keys(checks).forEach(k=>f.elements[k].value=op[k]==null?'':String(op[k]));['cost','space_throughput','verified_by','verified_at'].forEach(k=>f.elements[k].value=op[k]??'');f.elements.available_dates.value=(op.available_dates||[]).join(';');f.elements.verified_by.required=config.mode!=='demo';f.elements.verified_at.required=config.mode!=='demo';$('#venue-dialog').showModal();}
-$('#venue-form').onsubmit=async event=>{event.preventDefault();const values=Object.fromEntries(new FormData(event.target)),id=values.venue_id;delete values.venue_id;try{if(config.mode==='demo'){const updates={cost:Number(values.cost),space_throughput:Number(values.space_throughput),available_dates:values.available_dates.split(';').map(d=>d.trim()).filter(Boolean)};['details_verified','host_approved','accessible','private_space','power','available'].forEach(k=>updates[k]=values[k]===''?null:values[k]==='true');overrides[id]=updates;}else{const r=await api('/api/import',{kind:'venues',csv:toCSV(csvFields.venues,[{id,...values}])});if(r.errors.length)throw new Error(r.errors.map(e=>e.error).join('; '));await reloadInputs();delete overrides[id];}$('#venue-dialog').close();await generate(`Venue operations updated: ${boot.venues.find(v=>v.id===id).name}`);}catch(e){$('#venue-dialog').close();notice(e.message,true);}};
-function openCare(id){
- const site=boot.existing_services.find(s=>s.id===id);let dialog=$('#care-dialog');if(!dialog){dialog=document.createElement('dialog');dialog.id='care-dialog';document.body.append(dialog);}
- const checks={service_verified:'Chosen service confirmed',eligibility_verified:'Adult eligibility confirmed',schedule_verified:'Relevant operating schedule confirmed'};
- dialog.innerHTML=`<form id="care-form"><h2>${esc(site.name)}</h2><p class="small muted">Confirm that blood-pressure screening is offered to adults during the relevant operating schedule.</p>${Object.entries(checks).map(([k,l])=>`<label class="check-label"><input type="checkbox" name="${k}" ${site[k]?'checked':''}> ${esc(l)}</label>`).join('')}<label>Verified by<input name="verified_by" required maxlength="100" value="${esc(site.verified_by||'')}"></label><label>Verification date<input type="date" name="verified_at" required value="${esc(site.verified_at||'')}"></label><div class="dialog-actions"><button type="button" class="button secondary" id="cancel-care">Cancel</button><button class="button primary">Save verification & replan</button></div></form>`;
- const scheduleFields=document.createElement('div');scheduleFields.className='form-row';scheduleFields.innerHTML=`<label>Schedule confirmed from<input name="schedule_start" type="date" value="${esc(site.schedule_start||config.date_start)}" required></label><label>Schedule confirmed through<input name="schedule_end" type="date" value="${esc(site.schedule_end||config.date_end)}" required></label>`;$('#care-form').insertBefore(scheduleFields,$('#care-form .dialog-actions'));
- $('#cancel-care').onclick=()=>dialog.close();$('#care-form').onsubmit=async event=>{event.preventDefault();const record={id,service:'blood-pressure',...Object.fromEntries(new FormData(event.target))};Object.keys(checks).forEach(k=>record[k]=event.target.elements[k].checked);try{const r=await api('/api/import',{kind:'services',csv:toCSV(csvFields.services,[record])});if(r.errors.length)throw new Error(r.errors.map(e=>e.error).join('; '));await reloadInputs();dialog.close();await generate(`Existing care verified: ${site.name}`);}catch(e){dialog.close();notice(e.message,true);}};dialog.showModal();
-}
-function roadReview(signals){
- const road=signals.find(s=>s.feed==='ncdot-incidents'),items=road?.data?.items||[];
- const time=seconds=>typeof seconds==='number'?when(seconds*1000):'Unknown';
- return `<div class="content-panel"><h2>Road-event review</h2><p class="small muted">Published events are not matched to event journeys. Check their county, active dates, and local route before making a scheduling decision. Showing up to 40 records.</p><p class="small"><a href="https://drivenc.gov/list/events/traffic" target="_blank" rel="noopener">Review traffic on DriveNC ↗</a> · <a href="https://drivenc.gov/help/endpoint/event" target="_blank" rel="noopener">Developer-key setup ↗</a></p><div class="table-scroll"><table><thead><tr><th>County</th><th>Road / event</th><th>Reported period</th><th>Full closure</th></tr></thead><tbody>${items.slice(0,40).map(r=>`<tr><td>${esc(r.County||'Unknown')}</td><td><strong>${esc(r.RoadwayName||'Unspecified road')}</strong><span class="muted">${esc(r.Description||'No description')}</span></td><td>${time(r.StartDate)} – ${time(r.PlannedEndDate)}</td><td>${r.IsFullClosure===true?'Yes':r.IsFullClosure===false?'No':'Unknown'}</td></tr>`).join('')||'<tr><td colspan="4">No road-event rows in the available snapshot. Check the feed status above; absence is not evidence of clear roads.</td></tr>'}</tbody></table></div></div>`;
-}
-function renderConditions(){
- const p=$('#conditions-view'),signals=boot.feeds||[];
- p.innerHTML=`<div class="toolbar"><p class="venue-help" style="margin:0">Snapshots carry observation and fetch times. Failed refreshes retain last known values with a stale warning.</p><button class="button primary" id="refresh-feeds">Refresh feeds & save new run ↻</button></div><div class="feed-grid">${signals.map(f=>`<article class="feed-panel"><span class="pill ${f.stale?'uncertain':'robust'}">${f.stale?'Stale / unavailable':'Recently fetched'}</span><h2>${esc(f.title)}</h2><div class="feed-count">${f.data==null?'Unknown':fmt(f.data.count)}</div><p>${f.feed==='nws-alerts'?'Active alerts across North Carolina':'Published statewide road events'}</p><p>Fetched ${when(f.retrieved_at)}<br>Observed ${when(f.observed_at)}</p>${f.error?`<p style="color:#9a6548">${esc(f.error)}</p>`:''}<p><a href="${esc(f.feed==='ncdot-incidents'?'https://drivenc.gov/help/endpoint/event':f.source)}" target="_blank" rel="noopener">Public source ↗</a></p></article>`).join('')}</div><div class="condition-policy">Road incidents are not matched to cached driving paths. Review routes locally; no detours are inferred. Weather alerts do not change chronic-disease estimates. Venue and staff updates can remove infeasible plans immediately.</div><div class="content-panel"><h2>Weather for the selected venue</h2><p class="small muted">Forecasts cover only the near term. Dates beyond returned periods have no forecast; they are not assumed safe.</p><div class="toolbar"><select id="forecast-site" aria-label="Forecast venue">${boot.venues.map(v=>`<option value="${esc(v.id)}" ${v.id===selectedSite?'selected':''}>${esc(v.name)}</option>`).join('')}</select><button class="button secondary" id="fetch-forecast">Fetch hourly forecast</button></div><div id="forecast-results"></div></div><div class="content-panel"><h2>Recent alerts</h2><div class="table-scroll"><table><thead><tr><th>Alert</th><th>Area</th><th>Active period</th></tr></thead><tbody>${(signals.find(s=>s.feed==='nws-alerts')?.data?.items||[]).slice(0,30).map(a=>`<tr><td><strong>${esc(a.event)}</strong><span class="muted">${esc(a.headline)}</span></td><td>${esc(a.areaDesc)}</td><td>${when(a.onset||a.effective)} – ${when(a.ends||a.expires)}</td></tr>`).join('')||'<tr><td colspan="3">No active-alert rows in the available snapshot. Check feed freshness above.</td></tr>'}</tbody></table></div></div>`;
- p.insertAdjacentHTML('beforeend',roadReview(signals));
- $('#refresh-feeds').onclick=async event=>{event.target.disabled=true;event.target.textContent='Refreshing…';try{const r=await api('/api/refresh',{config:readConfig(),replan:true});boot.feeds=r.feeds;if(r.run){result=r.run;config=result.config;selectedSite=result.recommendations[0]?.site.id;renderResults();boot.runs=await api('/api/runs');}renderConditions();notice(`Snapshots saved with analysis v${result.version}. ${r.feeds.filter(f=>f.stale).length} feeds are stale or unavailable.`);}catch(e){notice(e.message,true);event.target.disabled=false;}};
- $('#fetch-forecast').onclick=async event=>{event.target.disabled=true;try{const f=await api('/api/forecast',{site_id:$('#forecast-site').value}),periods=f.data?.periods||[];$('#forecast-results').innerHTML=`<p class="small muted">${f.stale?'Stale or unavailable forecast. ':''}Fetched ${when(f.retrieved_at)}. ${esc(f.error||'')}</p>${periods.length?`<div class="table-scroll"><table><thead><tr><th>Time</th><th>Conditions</th><th>Temperature</th><th>Wind</th></tr></thead><tbody>${periods.slice(0,24).map(p=>`<tr><td>${when(p.startTime)}</td><td>${esc(p.shortForecast)}</td><td>${p.temperature} °${esc(p.temperatureUnit)}</td><td>${esc(p.windSpeed)} ${esc(p.windDirection)}</td></tr>`).join('')}</tbody></table></div>`:''}`;}catch(e){notice(e.message,true);}event.target.disabled=false;};
-}
-function renderHistory(){$('#history-view').innerHTML=`<div class="content-panel"><h2>Saved planning runs</h2><p class="small muted">Each version retains configuration, public inputs, routes, feed snapshots, and results. Viewing it does not overwrite it.</p><div class="table-scroll"><table><thead><tr><th>Version</th><th>Created</th><th>Leading venue</th><th>Change reason</th><th>Seed</th><th>Inspect</th></tr></thead><tbody>${boot.runs.map(r=>`<tr class="history-row"><td>v${r.version}<span class="muted">${esc(r.config.mode)}</span></td><td>${when(r.created_at)}</td><td>${esc(r.top_site||r.decision)}</td><td>${esc(r.change_reason)}</td><td>${r.config.seed}</td><td><button class="action-small" data-run="${esc(r.id)}">Open run</button></td></tr>`).join('')||'<tr><td colspan="6">No saved runs yet.</td></tr>'}</tbody></table></div></div>`;$$('[data-run]').forEach(b=>b.onclick=()=>loadRun(b.dataset.run));}
-async function loadRun(id){try{result=await api(`/api/runs/${encodeURIComponent(id)}`);populate(result.config);selectedSite=result.recommendations[0]?.site.id;renderResults();showView('planner');notice(`Viewing preserved analysis v${result.version}, created ${when(result.created_at)}. Generate to save a new version.`);$('#run-status').textContent=`Saved version ${result.version} · seed ${config.seed}`;}catch(e){notice(e.message,true);}}
+window.addEventListener('hashchange', route);
 
-function renderOutcomes(){
- const parent=$('#outcomes-view');
- parent.innerHTML=`<div class="content-panel"><h2>Record an event outcome</h2><p class="small muted">Aggregate counts only. Outcomes stay linked to analysis v${result?.version??'—'} and do not change its original inputs or ranking.</p>${result?.recommendations.length?`<form id="outcome-form" class="outcome-form"><label class="full">Event venue<select name="site_id">${result.recommendations.map(r=>`<option value="${esc(r.site.id)}">${esc(r.site.name)}</option>`).join('')}</select></label><label>Event date<input name="event_date" type="date" value="${result.recommendations[0].proposed_date}" required></label>${['turnout','services_completed','referrals','followups','staff_hours'].map(k=>`<label>${esc({turnout:'People attending',services_completed:'Services completed',referrals:'Referrals made',followups:'Follow-ups completed',staff_hours:'Total staff-hours'}[k])}<input name="${k}" type="number" min="0" value="0" step="${k==='staff_hours'?'.5':'1'}" required></label>`).join('')}<label class="full">Operational issues<textarea name="issues" maxlength="3000" placeholder="Aggregate operational observations; no patient identifiers"></textarea></label><button class="button primary">Save aggregate outcome</button></form>`:'<div class="empty-state">Generate a feasible plan before entering an event outcome.</div>'}</div><div class="content-panel"><h2>Recorded outcomes</h2><div class="table-scroll"><table><thead><tr><th>Date</th><th>Venue</th><th>Turnout</th><th>Services</th><th>Referrals</th><th>Follow-ups</th><th>Staff-hours</th></tr></thead><tbody>${(boot.outcomes||[]).map(o=>`<tr><td>${day(o.event_date)}</td><td>${esc(boot.venues.find(v=>v.id===o.site_id)?.name||o.site_id)}</td><td>${fmt(o.turnout)}</td><td>${fmt(o.services_completed)}</td><td>${fmt(o.referrals)}</td><td>${fmt(o.followups)}</td><td>${o.staff_hours}</td></tr>`).join('')||'<tr><td colspan="7">No outcomes recorded. Attendance forecasting is unavailable.</td></tr>'}</tbody></table></div></div>`;
- if($('#outcome-form'))$('#outcome-form').onsubmit=async e=>{e.preventDefault();const body=Object.fromEntries(new FormData(e.target));['turnout','services_completed','referrals','followups','staff_hours'].forEach(k=>body[k]=Number(body[k]));try{await api('/api/outcomes',{...body,run_id:result.id});boot.outcomes=await api('/api/outcomes');renderOutcomes();notice('Outcome saved. The original recommendation remains unchanged.');}catch(error){notice(error.message,true);}};
+// ---------- Map drawing ----------
+function drawBase(svg, withTracts) {
+  svg.replaceChildren();
+  el('path', {d: landPath, class: 'land'}, svg);
+  if (withTracts) {
+    const g = el('g', {}, svg);
+    for (const [id, status, priority] of withTracts) {
+      const d = tractPaths.get(id);
+      if (!d) continue;
+      el('path', {d, class: `tract ${status}`, 'fill-opacity': (0.35 + 0.65 * priority).toFixed(2)}, g);
+    }
+  }
 }
-function renderMethods(){
- const p=$('#methods-view'),s=result?.simulation_design;
- p.innerHTML=`<div class="content-panel"><h2>Data foundation · the whole state</h2><div class="schedule-summary"><span>Tracts<strong>${fmt(boot.tracts.length)}</strong></span><span>Counties<strong>${Object.keys(boot.counties).length}</strong></span><span>Routed shortlist<strong>${boot.venues.length}</strong></span><span>Unknown road-time cells<strong>${boot.routing.unknown_routes}</strong></span></div><p class="small muted">${esc(boot.candidate_selection)}. Fixed statewide benchmarks do not change when the shortlist changes.</p><div class="source-grid">${boot.sources.map(s=>`<article class="source-item"><h3>${esc(s.title)}</h3><p>${esc(s.year)}</p><p>${esc(s.fields)}</p><p>${esc(s.quality)}</p><a class="small" href="${esc(s.url)}" target="_blank" rel="noopener">Inspect original source ↗</a></article>`).join('')}<article class="source-item"><h3>OSRM road travel matrix</h3><p>Cached ${when(boot.routing.retrieved_at)} · driving profile</p><p>${esc(boot.routing.tract_point)}. An unavailable route is represented as unknown.</p><a class="small" href="https://project-osrm.org/docs/v5.24.0/api/" target="_blank" rel="noopener">Routing documentation ↗</a></article></div></div><div class="content-panel"><h2>A score you can reproduce</h2><div class="method-formula">health_index = clip((high_blood_pressure_pct − 15) / 40, 0, 1)<br>transport_index = clip(no_vehicle_household_pct / 20, 0, 1)<br>priority = health_weight × health_index + transport_weight × transport_index<br>score = Σ adult_population × priority × trend_multiplier × newly_covered</div><p class="small muted">A tract is newly covered only when verified baseline travel exceeds the target and the candidate meets it. Unknown baseline access is excluded. Missing required indicators are flagged and excluded; population is not a patient count.</p><div class="chart-key"><span><i></i>Health contribution</span><span><i></i>Transport contribution</span></div><p class="small muted">Feasibility precedes scoring. Exact ties use lower cost, then venue ID. Multi-event schedules count each tract once, with different dates for one vehicle. Capacity describes possible services and does not cap geographic reach.</p></div><div class="content-panel"><h2>Saved sensitivity design</h2>${s?.draws?`<div class="schedule-summary"><span>Seed<strong>${s.seed}</strong></span><span>Scenarios per concentration<strong>${fmt(s.draws)}</strong></span><span>Concentrations<strong>${s.concentration} / ${s.broader_concentration}</strong></span><span>Review threshold<strong>Top ${s.top_n} in ${pct(s.threshold)}</strong></span></div><ul class="list-plain"><li>${esc(s.weight_distribution)}; bounds ${s.bounds.join('–')}.</li><li>${esc(s.measured_uncertainty)}</li><li>${esc(s.population_uncertainty)}</li><li>${esc(s.travel_distribution)}</li><li>${esc(s.cost_policy)}</li><li>${esc(s.interpretation)}</li></ul>`:'<p class="small muted">A feasible run is needed for simulation statistics.</p>'}</div><div class="content-panel"><div class="toolbar"><h2>Service-specific historical signals</h2>${importToolbar('series','Series')}</div><p class="small muted">No compatible public blood-pressure demand series is loaded. Trend strength defaults to zero. A partner can import aggregate service referrals or follow-up rates with geography, denominator, period, source, and revision metadata. Respiratory trends are not used for this campaign.</p><div>${renderSeries()}</div></div><div class="content-panel"><h2>Data quality checks</h2><p class="small muted">${(result?.data_quality||boot.quality_issues).length} join or geocoding issues retained. Invalid geography, duplicate imports, suppressed values, and missing denominators are reported.</p><div class="table-scroll"><table><thead><tr><th>Record</th><th>Issue</th></tr></thead><tbody>${(result?.data_quality||boot.quality_issues).map(i=>`<tr><td>${esc(i.tract_id||i.site)}</td><td>${esc(i.issue)}</td></tr>`).join('')||'<tr><td colspan="2">No failed joins in selected tract indicators.</td></tr>'}</tbody></table></div></div>`;
- bindImports(p);
+function drawRing(svg, lat, lon, miles) {
+  const [x, y] = project(lon, lat), r = milesToPx(miles);
+  el('circle', {cx: x, cy: y, r, class: 'ring-fill'}, svg);
+  el('circle', {cx: x, cy: y, r, class: 'ring'}, svg);
 }
-function renderSeries(){const records=boot.series||[];if(!records.length)return '<div class="empty-state">No compatible observations imported. Trend multiplier = 1.</div>';const max=Math.max(...records.map(r=>r.recent_rate),.001);return `<svg class="series-chart" viewBox="0 0 800 150" role="img" aria-label="Imported aggregate historical rate observations">${records.map((r,i)=>`<circle cx="${30+i*740/Math.max(1,records.length-1)}" cy="${125-r.recent_rate/max*100}" r="4" fill="#176b58"><title>${esc(r.period_end)}: ${r.recent_rate}</title></circle>`).join('')}</svg><div class="table-scroll"><table><thead><tr><th>Signal / geography</th><th>Period</th><th>Rate</th><th>Baseline</th><th>Denominator</th><th>Quality</th></tr></thead><tbody>${records.map(r=>`<tr><td>${esc(r.signal)} · ${esc(r.geography_type)} ${esc(r.geography_id)}</td><td>${esc(r.period_start)} – ${esc(r.period_end)}</td><td>${r.recent_rate.toFixed(5)}</td><td>${r.baseline_rate.toFixed(5)}</td><td>${fmt(r.denominator)}</td><td>${r.provisional?'Provisional · ':''}${r.stale?'Stale':r.suppressed?'Suppressed':'Comparable'}</td></tr>`).join('')}</tbody></table></div><p class="source-hint">County observations remain county context. The bounded trend contribution appears in each numeric score breakdown.</p>`;}
-$('#export-json').onclick=async()=>{if(!result)return;try{const full=await api(`/api/runs/${encodeURIComponent(result.id)}?export=1`);download(`outreach-plan-v${result.version}.json`,JSON.stringify(full,null,2),'application/json');notice(`Analysis v${result.version} exported with input snapshots and the road-time matrix.`);}catch(e){notice(e.message,true);}};
-$('#export-brief').onclick=()=>{
- if(!result)return;const r=result.recommendations.find(r=>r.site.id===selectedSite)||result.recommendations[0];if(!r){notice('A feasible recommendation is needed for an event brief.',true);return;}
- const html=`<!doctype html><html lang="en"><meta charset="utf-8"><title>Event brief · ${esc(r.site.name)}</title><style>body{font-family:system-ui,sans-serif;max-width:760px;margin:35px auto;color:#243d31;padding:15px}h1{font-size:26px}h2{font-size:15px;margin-top:24px}p,li,td,th{font-size:12px;line-height:1.55}table{width:100%;border-collapse:collapse}td,th{text-align:left;border-bottom:1px solid #ddd;padding:8px}button{padding:10px 18px}@media print{body{margin:0;padding:0}button{display:none}h2{margin-top:18px}}@page{size:letter;margin:15mm}</style><button onclick="window.print()">Print / save PDF</button><p>RURAL OUTREACH PLANNER · NORTH CAROLINA · ANALYSIS v${result.version}</p><h1>${esc(r.site.name)}</h1><p>${esc(result.service.name)} · ${day(r.proposed_date)} · ${esc(r.site.address)}, ${esc(r.site.city)}<br>${esc(r.feasibility)} · Hospital and host approval required.</p><table><tr><th>Geographic reach</th><td>${fmt(r.approx_population_in_newly_covered_tracts)} adults in ${r.newly_covered_tracts.length} tracts newly within ${config.travel_target} driving minutes</td></tr><tr><th>Service capacity</th><td>${r.event_capacity} screenings · ${r.required_staff} staff × ${config.clinical_hours} hours × ${config.services_per_staff_hour} services per hour, limited by stations and equipment</td></tr><tr><th>Expected attendance</th><td>Unavailable; no calibrated event history</td></tr><tr><th>Cost / equipment</th><td>${money(r.estimated_cost)} / ${esc(r.required_equipment)}</td></tr><tr><th>Coverage score</th><td>${fmt(r.score)} = health ${fmt(r.score_components.health)} + transport ${fmt(r.score_components.transport)} + trend ${fmt(r.score_components.trend)}</td></tr><tr><th>Robustness</th><td>Top ${config.top_n}: ${pct(r.top_n_frequency)} · first place ${pct(r.first_frequency)} · median rank ${r.median_rank} · average regret ${fmt(r.average_regret)}</td></tr></table><h2>Required review</h2><ul>${r.open_checks.map(c=>`<li>${esc(c)}</li>`).join('')}</ul><h2>Assumptions and reproducibility</h2><p>${config.mode==='demo'?'DEMO: approvals, dates, provider relevance, costs, and resource rates are sample inputs. ':''}Tract-centroid driving estimates are approximate and do not include live closures. Reach is not turnout. Weights: health ${pct(config.health_weight)}, transport ${pct(1-config.health_weight)}. Fixed bounds: health 15–55%; transport 0–20%. Seed ${config.seed}; ${fmt(config.simulations)} scenarios. Model ${result.model_version}. Input hash ${esc(result.input_hash)}. Export JSON for complete numeric inputs.</p><h2>Data sources</h2><ul>${result.sources.map(s=>`<li>${esc(s.title)} · ${esc(s.year)}</li>`).join('')}</ul></html>`;
- download(`event-brief-v${result.version}.html`,html,'text/html');notice('One-page event brief downloaded. Open it to print or save as PDF.');
-};
-form.onsubmit=e=>{e.preventDefault();generate();};form.oninput=()=>{updateWeights();updateMode();$('#run-status').textContent='Inputs changed · generate recommendations to save a new run.';};
-$('#confirmed-mode').onclick=()=>{form.elements.mode.value='confirmed';updateMode();generate('Switched to planner-confirmed operations');};
-$('#map-layer').onchange=renderMap;$('#zoom-in').onclick=()=>{mapZoom=Math.min(4,mapZoom*1.4);applyZoom();};$('#zoom-out').onclick=()=>{mapZoom=Math.max(1,mapZoom/1.4);applyZoom();};$('#zoom-reset').onclick=()=>{mapZoom=1;applyZoom();};$('#close-venue').onclick=()=>$('#venue-dialog').close();$$('.nav-item').forEach(b=>b.onclick=()=>showView(b.dataset.view));
-async function init(){try{[boot,geometry]=await Promise.all([api('/api/bootstrap'),fetch('/data/geography.json').then(r=>r.json())]);$('#service').innerHTML=Object.entries(boot.services).map(([id,s])=>`<option value="${esc(id)}">${esc(s.name)}</option>`).join('');Object.entries(boot.counties).sort((a,b)=>a[1].localeCompare(b[1])).forEach(([id,name])=>{const o=document.createElement('option');o.value=id;o.textContent=`${name} County`;$('#region').append(o);});populate(boot.config);renderMap();if(boot.runs.length)await loadRun(boot.runs[0].id);else await generate('Initial statewide blood-pressure screening demo');}catch(e){$('#fatal-error').textContent=`The workspace could not load: ${e.message}. Check that the Python server and data preparation completed.`;$('#fatal-error').classList.remove('hidden');}}
-init();
+function drawHospital(svg, lat, lon, name, f = 1) {
+  const [x, y] = project(lon, lat);
+  const g = el('g', {class: 'hospital', transform: `translate(${x} ${y}) scale(${f})`}, svg);
+  el('path', {d: 'M-3-9h6v6h6v6h-6v6h-6v-6h-6v-6h6z'}, g);
+  if (name) { const t = el('text', {x: 14, y: -8, class: 'halo'}, g); t.textContent = name; }
+}
+// ---------- Results ----------
+function renderResults(plan) {
+  lastPlan = plan;
+  const {hospital, clinics, summary, params} = plan;
+  $('#results-title').textContent = `${plan.service_name} · ${hospital.name}`;
+  $('#results-address').textContent = hospital.address || '';
+  drawResultMap();
+  const m = $('#metrics');
+  m.replaceChildren();
+  [[fmt(summary.adults_newly_served), `adults newly within ${params.travel_target} min`],
+   [Math.round(summary.share_of_need_addressed * 100) + '%', 'of need-weighted demand reached'],
+   [fmt(summary.total_capacity), `services per clinic day across ${clinics.length} site${clinics.length === 1 ? '' : 's'} (${fmt(summary.capacity_per_clinic_day)} each)`],
+   ['$' + fmt(summary.estimated_cost), `estimated cost for ${clinics.length} clinic day${clinics.length === 1 ? '' : 's'}`]].forEach(([v, l]) => {
+    const d = document.createElement('div'); d.className = 'metric';
+    d.innerHTML = `<strong>${esc(v)}</strong><span>${esc(l)}</span>`; m.appendChild(d);
+  });
+  const list = $('#clinic-list');
+  list.replaceChildren();
+  clinics.forEach(c => {
+    const li = document.createElement('li'); li.className = 'clinic';
+    const when = new Date(c.date + 'T12:00:00').toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'});
+    li.innerHTML = `<span class="badge" aria-hidden="true">${c.rank}</span><h3>${esc(c.name)}</h3>
+      <div class="addr">${esc([c.address, c.city].filter(Boolean).join(', '))} · ${esc(c.county)} County</div>
+      <dl><div><dt>Suggested date</dt><dd>${esc(when)}</dd></div><div><dt>Adults newly in reach</dt><dd>${fmt(c.new_adults)}</dd></div>
+      <div><dt>Capacity per day</dt><dd>${fmt(c.capacity)}</dd></div>
+      <div><dt>${esc(plan.indicator_label)}</dt><dd>${c.avg_indicator ?? '—'}%</dd></div><div><dt>No-vehicle homes</dt><dd>${c.avg_no_vehicle ?? '—'}%</dd></div>
+      <div><dt>Chosen in</dt><dd>${c.stability.chosen_in} of ${c.stability.of} priority mixes</dd></div></dl>`;
+    list.appendChild(li);
+  });
+  $('#method-note').textContent = plan.method.note + ' Reach describes who lives near a site, not expected turnout.';
+  $('#method-note').textContent += ` Each clinic day is costed at $${fmt(summary.cost_per_clinic_day)} (staff time plus $${plan.method.event_fixed_cost} for supplies and space).`;
+  $('#why').innerHTML = `<p>${esc(templateWhy(plan))}</p><p class="src" id="why-src">Plain-language summary generated from the figures shown.</p>`;
+  if (options?.gemini) explain(params);
+  setupAnnounce(plan);
+  setupChat(plan);
+  const dlg = $('#results');
+  if (!dlg.open) dlg.showModal();
+  dlg.querySelector('.results-body').scrollTop = 0;
+}
+const CHAT_STARTERS = ['Why were these communities prioritized?', 'What if we cut the travel target to 15 minutes?',
+  'Is a fourth clinic day worth it?', 'Which communities are left out?', 'How would more staff change capacity?'];
+let chatHistory = [];
+function setupChat(plan) {
+  chatHistory = [];
+  const log = $('#chat-log'), chips = $('#chat-chips'), form = $('#chat-form'), input = $('#chat-input'), send = $('#chat-send');
+  log.replaceChildren(); chips.replaceChildren(); input.value = '';
+  const enabled = !!options?.gemini;
+  form.classList.toggle('hidden', !enabled);
+  $('#chat-note').textContent = enabled ? "Answers come from this plan's data. Powered by Google Gemini." : 'Add GEMINI_API_KEY to .env to ask questions about this plan.';
+  if (!enabled) return;
+  const add = (cls, text) => { const d = document.createElement('div'); d.className = 'cmsg ' + cls; d.textContent = text; log.appendChild(d); log.scrollTop = log.scrollHeight; return d; };
+  async function ask(q) {
+    q = q.trim(); if (!q || send.disabled) return;
+    chips.replaceChildren(); input.value = '';
+    add('me', q); chatHistory.push({role: 'user', text: q});
+    send.disabled = true; input.disabled = true;
+    const wait = add('ai', ''); wait.innerHTML = '<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>Looking at the plan…';
+    try {
+      const r = await api('/api/plan-chat', {params: plan.params, messages: chatHistory});
+      wait.textContent = r.reply; chatHistory.push({role: 'assistant', text: r.reply});
+    } catch (e) { wait.textContent = e.message; chatHistory.pop(); }
+    finally { send.disabled = false; input.disabled = false; input.focus(); log.scrollTop = log.scrollHeight; }
+  }
+  CHAT_STARTERS.forEach(q => { const b = document.createElement('button'); b.type = 'button'; b.textContent = q; b.addEventListener('click', () => ask(q)); chips.appendChild(b); });
+  form.onsubmit = e => { e.preventDefault(); ask(input.value); };
+}
+
+async function setupAnnounce(plan) {
+  const box = $('#announce');
+  box.replaceChildren();
+  if (!plan.id) return;
+  try {
+    const r = await api('/api/bot/notify', {plan_id: plan.id, dry_run: true});
+    const label = document.createElement('div');
+    label.innerHTML = r.people
+      ? `<b>${r.people} subscriber${r.people === 1 ? '' : 's'}</b> nearby asked for these services. Text them about these clinics?`
+      : `<b>No subscribers near these clinics yet.</b> Share the <a href="/join.html" target="_blank" rel="noopener">sign-up page</a> to build the list.`;
+    box.appendChild(label);
+    if (r.people) {
+      const row = document.createElement('div'); row.className = 'row';
+      const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'button primary'; btn.textContent = 'Text subscribers';
+      const status = document.createElement('span'); status.className = 'muted small'; status.setAttribute('role', 'status');
+      btn.addEventListener('click', async () => {
+        btn.disabled = true; status.textContent = 'Queuing…';
+        try { const s = await api('/api/bot/notify', {plan_id: plan.id}); status.textContent = `Sending ${s.queued} text${s.queued === 1 ? '' : 's'} to ${s.people} ${s.people === 1 ? 'person' : 'people'}.`; status.classList.add('ok'); }
+        catch (e) { status.textContent = e.message; btn.disabled = false; }
+      });
+      row.append(btn, status); box.appendChild(row);
+    }
+  } catch { /* announcements unavailable */ }
+}
+function templateWhy(plan) {
+  const {clinics, summary, params} = plan;
+  const first = clinics[0];
+  return `Within a ${params.radius}-minute drive of ${plan.hospital.name} there are ${fmt(summary.adults_in_area)} adults. ` +
+    `${clinics.length === 1 ? 'The best single host site is' : `The ${clinics.length} sites chosen together reach the most need-weighted adults, starting with`} ${first.name} in ${first.city || first.county + ' County'}, ` +
+    `which brings ${fmt(first.new_adults)} adults within ${params.travel_target} minutes. Priority combines ${plan.indicator_label.toLowerCase()} rates and households without a vehicle, based on census-derived estimates.`;
+}
+async function explain(params) {
+  try {
+    const r = await api('/api/gemini/explain', {params});
+    $('#why').innerHTML = `<p>${esc(r.text)}</p><p class="src">Explained by Gemini from the figures shown. Numbers come from census data, not from the model.</p>`;
+  } catch { /* keep template summary */ }
+}
+const FULL = {x: 0, y: 0, w: W, h: H};
+let view = {...FULL}, markers = [], serviceView = {...FULL};
+function applyView() {
+  const svg = $('#result-map');
+  svg.setAttribute('viewBox', `${view.x.toFixed(1)} ${view.y.toFixed(1)} ${view.w.toFixed(1)} ${view.h.toFixed(1)}`);
+  const f = view.w / W * 1.15;
+  markers.forEach(m => m.g.setAttribute('transform', `translate(${m.x} ${m.y}) scale(${f})`));
+}
+function drawResultMap() {
+  const plan = lastPlan, svg = $('#result-map');
+  if (!plan) return;
+  const {hospital, clinics} = plan;
+  const [hx, hy] = project(hospital.lon, hospital.lat), r = milesToPx(plan.radius_miles) * 1.3 + 30;
+  const sw = 2 * r, sh = sw * 0.62;
+  serviceView = {x: hx - sw / 2, y: hy - sh / 2, w: sw, h: sh};
+  view = {...serviceView};
+  drawBase(svg, plan.tracts.map(([id, p, s]) => [id, s, p]));
+  drawRing(svg, hospital.lat, hospital.lon, plan.radius_miles);
+  markers = [];
+  drawHospital(svg, hospital.lat, hospital.lon, hospital.name);
+  markers.push({g: svg.lastChild, x: hx, y: hy});
+  clinics.forEach(c => {
+    const [x, y] = project(c.lon, c.lat);
+    const g = el('g', {class: 'clinic'}, svg);
+    el('circle', {r: 11}, g);
+    el('text', {class: 'n', y: 4}, g).textContent = c.rank;
+    el('title', {}, g).textContent = `${c.label}: ${c.name}`;
+    el('text', {x: 16, y: 5, class: 'halo'}, g).textContent = c.name;
+    markers.push({g, x, y});
+  });
+  applyView();
+}
+function zoomBy(factor, cx, cy) {
+  const w = Math.min(Math.max(view.w * factor, W / 40), W * 1.2), k = w / view.w;
+  cx ??= view.x + view.w / 2; cy ??= view.y + view.h / 2;
+  view = {x: cx - (cx - view.x) * k, y: cy - (cy - view.y) * k, w, h: view.h * k};
+  applyView();
+}
+function svgPoint(e) {
+  const svg = $('#result-map'), pt = svg.createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+  return [p.x, p.y];
+}
+(() => {
+  const svg = $('#result-map');
+  let drag = null;
+  svg.addEventListener('wheel', e => {
+    e.preventDefault();
+    const px = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+    const [x, y] = svgPoint(e);
+    zoomBy(Math.exp(Math.max(-60, Math.min(60, px)) * 0.0012), x, y);
+  }, {passive: false});
+  svg.addEventListener('pointerdown', e => { drag = {px: e.clientX, py: e.clientY, v: {...view}}; svg.setPointerCapture(e.pointerId); svg.classList.add('dragging'); });
+  svg.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const s = view.w / svg.getBoundingClientRect().width;
+    view.x = drag.v.x - (e.clientX - drag.px) * s; view.y = drag.v.y - (e.clientY - drag.py) * s;
+    applyView();
+  });
+  const end = () => { drag = null; svg.classList.remove('dragging'); };
+  svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
+  $('#zoom-in').addEventListener('click', () => zoomBy(0.8));
+  $('#zoom-out').addEventListener('click', () => zoomBy(1.25));
+  $('#zoom-reset').addEventListener('click', () => { view = {...serviceView}; applyView(); });
+})();
+$('#close-results').addEventListener('click', () => $('#results').close());
+
+// ---------- Hospital autocomplete ----------
+const session = (crypto.randomUUID?.() || String(Date.now()) + Math.random().toString(16).slice(2)).replace(/-/g, '');
+(() => {
+  const input = $('#hospital-name'), list = $('#suggest-list'), status = $('#place-status');
+  let items = [], active = -1, timer = 0, seq = 0;
+  const close = () => { list.classList.add('hidden'); input.setAttribute('aria-expanded', 'false'); active = -1; };
+  const mark = i => {
+    active = i;
+    [...list.children].forEach((li, n) => li.setAttribute('aria-selected', n === i ? 'true' : 'false'));
+    if (i >= 0) input.setAttribute('aria-activedescendant', `sug-${i}`); else input.removeAttribute('aria-activedescendant');
+  };
+  const render = () => {
+    list.replaceChildren();
+    if (!items.length) { close(); return; }
+    items.forEach((s, i) => {
+      const li = document.createElement('li');
+      li.id = `sug-${i}`; li.setAttribute('role', 'option'); li.setAttribute('aria-selected', 'false');
+      li.innerHTML = `<b>${esc(s.name)}</b><span>${esc(s.detail)}</span>`;
+      li.addEventListener('mousedown', e => { e.preventDefault(); choose(i); });
+      list.appendChild(li);
+    });
+    list.classList.remove('hidden'); input.setAttribute('aria-expanded', 'true');
+  };
+  async function choose(i) {
+    const s = items[i]; close();
+    input.value = s.name; status.textContent = 'Locating…';
+    try {
+      const d = await api(`/api/places/details?id=${encodeURIComponent(s.id)}&session=${session}`);
+      input.value = s.name;
+      place = {text: s.name, lat: d.lat, lon: d.lon, address: d.address};
+      status.textContent = d.address; status.classList.add('place-ok');
+    } catch (err) { place = null; status.textContent = err.message; status.classList.remove('place-ok'); }
+  }
+  input.addEventListener('input', () => {
+    place = null; status.classList.remove('place-ok');
+    status.textContent = 'Choose a suggestion so we use the exact address.';
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (q.length < 3) { items = []; render(); return; }
+    timer = setTimeout(async () => {
+      const mine = ++seq;
+      try {
+        const r = await api(`/api/places/suggest?q=${encodeURIComponent(q)}&session=${session}`);
+        if (mine !== seq) return;
+        items = r.suggestions; render();
+      } catch (err) { if (mine === seq) { items = []; close(); status.textContent = err.message; } }
+    }, 250);
+  });
+  input.addEventListener('keydown', e => {
+    if (list.classList.contains('hidden')) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); mark((active + 1) % items.length); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); mark((active - 1 + items.length) % items.length); }
+    else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); choose(active); }
+    else if (e.key === 'Escape') close();
+  });
+  input.addEventListener('blur', () => setTimeout(close, 120));
+})();
+
+// ---------- Form ----------
+function payload() {
+  const f = new FormData(form), num = k => Number(f.get(k));
+  const name = f.get('hospital_name').trim();
+  const p = place && place.text === name ? {lat: place.lat, lon: place.lon, address: place.address} : {};
+  return {...p, hospital_name: name, service: f.get('service'), radius: num('radius'),
+    travel_target: num('travel_target'), date_start: f.get('date_start'), date_end: f.get('date_end'), days: num('days'),
+    staff_count: num('staff_count'), clinical_hours: num('clinical_hours'), services_per_staff_hour: num('services_per_staff_hour'),
+    use_existing_care: form.use_existing_care.checked};
+}
+function updateHints() {
+  const staff = +form.staff_count.value, hours = +form.clinical_hours.value, rate = +form.services_per_staff_hour.value, days = +form.days.value;
+  const perDay = staff * hours * rate, cost = staff * hours * 55 + 400;
+  $('#capacity-hint').textContent = `About ${fmt(perDay)} services per clinic day, ${fmt(perDay * days)} over ${days} day${days === 1 ? '' : 's'}. Estimated cost $${fmt(cost * days)}.`;
+}
+form.addEventListener('input', updateHints);
+form.addEventListener('submit', async e => {
+  e.preventDefault(); show('');
+  if (!form.hospital_name.value.trim()) { form.hospital_name.focus(); return show('Enter your hospital name.'); }
+  const btn = $('#run'), lab = $('#run-label'); btn.disabled = true; lab.textContent = 'Locating hospital and simulating…';
+  try { renderResults(await api('/api/siting', payload())); }
+  catch (err) { show(err.message); }
+  finally { btn.disabled = false; lab.textContent = 'Find optimal clinic location'; }
+});
+
+// ---------- Docs ----------
+function renderDocs() {
+  const radii = [15, 30, 45, 60].map(m => `<tr><td>${m} minutes</td><td>${(m * MILES_PER_MINUTE).toFixed(1)} miles</td></tr>`).join('');
+  $('#docs-view').innerHTML = `<article class="docs">
+  <p class="eyebrow">DOCUMENTATION</p>
+  <h1>How the clinic recommendation works</h1>
+  <p class="lead">The recommendation is a transparent optimization over census tracts. It is not a trained machine-learning model: every number can be traced back to a census estimate and a stated assumption.</p>
+  <nav class="toc" aria-label="On this page"><a href="#/docs" data-jump="overview">Overview</a><a href="#/docs" data-jump="data">Data</a><a href="#/docs" data-jump="algorithm">Algorithm</a><a href="#/docs" data-jump="robust">Robustness</a><a href="#/docs" data-jump="limits">Limits</a><a href="#/docs" data-jump="gemini">Gemini</a></nav>
+
+  <h2 id="overview">Overview</h2>
+  <p>A hospital gives us its name (located with Google Maps), a driving radius, a service, a patient travel target, dates and the number of clinic days. We score 2,637 North Carolina census tracts (10 of the state's 2,647 lack the data needed) on how much they need the service, then pick library host sites so the most need falls within the travel target of a free clinic, one site per clinic day.</p>
+  <pre>inputs → need score per tract → tracts in hospital radius → drop tracts with existing access
+       → candidate host sites → greedy maximum-coverage pick → dates → robustness check</pre>
+
+  <h2 id="data">Data</h2>
+  <table><thead><tr><th>Signal</th><th>Source</th><th>Used for</th></tr></thead><tbody>
+  <tr><td>Adults 18+</td><td>Census ACS 2024 5-year, B01001</td><td>Population weight</td></tr>
+  <tr><td>Households with no vehicle</td><td>Census ACS 2024 5-year, B08201</td><td>Transport barrier</td></tr>
+  <tr><td>Diagnosed high blood pressure, diabetes, COPD, current asthma</td><td>CDC PLACES 2025 (modeled tract estimates)</td><td>Health need, one indicator per service</td></tr>
+  <tr><td>Host sites</td><td>IMLS public library outlets, FY2024 (397)</td><td>Candidate clinic locations</td></tr>
+  <tr><td>Existing care</td><td>NCDHHS safety-net directory + OSRM road times</td><td>Baseline access</td></tr></tbody></table>
+  <p class="callout">All census figures are read from files bundled with the app. They are never generated by an AI model.</p>
+
+  <h2 id="algorithm">Algorithm</h2>
+  <h3>1. Need score for each tract</h3>
+  <pre>health_index  = clip((indicator_percent − low) / (high − low), 0, 1)
+barrier_index = clip(no_vehicle_percent / 20, 0, 1)
+priority      = w · health_index + (1 − w) · barrier_index
+need_weight   = adults_18_plus × priority</pre>
+  <p>The indicator and its fixed <code>low</code>–<code>high</code> benchmark depend on the service: blood pressure 15–55%, diabetes 4–24%, COPD 2–15%, asthma 8.5–14.5%. <code>w</code> is 70% health and 30% transport barriers. Fixed benchmark ranges mean a score does not change when you add or remove candidate sites.</p>
+  <h3>2. Service area</h3>
+  <p>Your hospital is located with Google Places (the suggestion you pick, or a text search of the name, with address geocoding as a fallback). Your driving radius is converted to distance at ${MILES_PER_MINUTE} miles per minute, which approximates rural North Carolina road speed and circuity. Only tracts whose center lies inside the circle count.</p>
+  <table><thead><tr><th>Driving radius</th><th>Straight-line circle</th></tr></thead><tbody>${radii}</tbody></table>
+  <h3>3. Existing access</h3>
+  <p>A tract is treated as already served when one of the 27 geocoded sites in the NCDHHS safety-net directory is within the patient travel target by cached road drive time (a precomputed OSRM matrix). These tracts add nothing to a new clinic's score. You can switch this off.</p>
+  <h3>4. Candidate sites and reach</h3>
+  <p>Candidates are the library outlets inside your circle. A site <em>reaches</em> a tract when the tract center is within the travel target of the site (same minutes-to-miles conversion) and the tract is inside your hospital circle. Reach outside the circle is not counted.</p>
+  <h3>5. Greedy maximum coverage</h3>
+  <pre>covered = ∅
+repeat k times:
+    pick site s maximizing Σ need_weight(t) for t in reach(s) \\ covered
+    stop if the gain is zero
+    covered ← covered ∪ reach(s)</pre>
+  <p><code>k</code> is your number of clinic days (up to 10), one site per day. An estimated clinic day costs <code>staff × hours × $55 + $400</code>. Daily capacity is <code>staff × hours × services per staff hour</code>. Greedy selection is a standard approximation for maximum coverage and is guaranteed to reach at least 63% (1 − 1/e) of the best possible total. Ties go to the lower site ID so results are repeatable.</p>
+  <h3>6. Scheduling</h3>
+  <p>Chosen clinics are spread evenly across your date window on weekdays, with the largest-reach site first. Confirm dates with each host before announcing.</p>
+
+  <h2 id="robust">Robustness</h2>
+  <p>The 70/30 health-versus-transport split is a judgment call, so we rerun the selection for seven mixes from 20% to 80% health. The card for each clinic shows how many of those seven runs picked it. A clinic chosen in 7 of 7 does not depend on that choice.</p>
+
+  <h2 id="limits">What this does not do</h2>
+  <ul>
+  <li><strong>It does not predict turnout.</strong> Reach counts adults who live near a site; staffing and outreach decide who attends. Daily capacity (staff × hours × services per staff hour) is shown separately and is usually far smaller than reach.</li>
+  <li>Health indicators are modeled estimates of <em>diagnosed</em> prevalence and miss undiagnosed cases. The existing-care directory is not service-specific, so a nearby clinic may not offer the service you chose.</li>
+  <li>Hospital radius and clinic reach are straight-line approximations converted from minutes at a fixed speed, not real drive times from your address. Existing-clinic access does use real road times.</li>
+  <li>The 397 library outlets are a candidate list, not a checked inventory. Confirm host approval, space, power and accessibility.</li>
+  <li>The $55 per staff hour and $400 per clinic day are placeholder cost assumptions, shown as an estimate only.</li>
+  <li>No patient-level data is used or stored.</li>
+  </ul>
+
+  <h2 id="gemini">Where Gemini is used</h2>
+  <p>Gemini only writes the plain-language explanation of a finished plan. It never supplies census numbers or chooses sites. Set <code>GEMINI_API_KEY</code> in <code>.env</code> to enable it; without a key the app uses a built-in summary.</p>
+  </article>`;
+  $('#docs-view').addEventListener('click', e => {
+    const a = e.target.closest('[data-jump]');
+    if (a) { e.preventDefault(); document.getElementById(a.dataset.jump)?.scrollIntoView({behavior: 'smooth'}); }
+  });
+}
+
+// ---------- Boot ----------
+async function boot() {
+  const d = new Date(), iso = n => { const x = new Date(d); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+  form.date_start.value = iso(7); form.date_end.value = iso(35);
+  updateHints(); route();
+  try {
+    const [opts, geo] = await Promise.all([api('/api/clinic-options'), fetch('/data/geography.json').then(r => r.json())]);
+    options = opts;
+    form.service.replaceChildren(...Object.entries(opts.services).map(([k, v]) => new Option(v, k)));
+    const parts = [];
+    for (const f of geo.features) {
+      const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
+      const d = polys.map(p => p.map(ringPath).join('')).join('');
+      tractPaths.set(f.properties.id, d); parts.push(d);
+    }
+    landPath = parts.join('');
+  } catch (err) { show('Could not load the North Carolina data: ' + err.message); }
+}
+boot();
