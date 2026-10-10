@@ -218,6 +218,145 @@ class InterfaceContractTests(unittest.TestCase):
                     self.assertIn(str(value), parser.options[key])
 
 
+class SitingTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.folder = tempfile.TemporaryDirectory()
+        cls.app = Application(runtime_dir=cls.folder.name)
+        cls.durham = cls.app.county_centers()["37063"]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.folder.cleanup()
+
+    def params(self, **kw):
+        return {"lat": self.durham[0], "lon": self.durham[1], "radius": 30, "travel_target": 20, "days": 3, "staff_count": 3, "clinical_hours": 4, "services_per_staff_hour": 5, **kw}
+
+    def test_clinics_are_inside_radius_and_unique(self):
+        plan = self.app.site(self.params())
+        self.assertTrue(1 <= len(plan["clinics"]) <= 3)
+        self.assertEqual(len({c["id"] for c in plan["clinics"]}), len(plan["clinics"]))
+        self.assertTrue(all(c["distance_from_hospital_miles"] <= plan["radius_miles"] + .1 for c in plan["clinics"]))
+        self.assertEqual(plan["summary"]["estimated_cost"], len(plan["clinics"]) * 1060)
+        self.assertEqual(plan["clinics"][0]["capacity"], 60)
+        self.assertEqual(sum(c["new_adults"] for c in plan["clinics"]), plan["summary"]["adults_newly_served"])
+
+    def test_deterministic_and_larger_radius_never_has_fewer_candidates(self):
+        a, b = self.app.site(self.params()), self.app.site(self.params())
+        self.assertEqual([c["id"] for c in a["clinics"]], [c["id"] for c in b["clinics"]])
+        self.assertGreaterEqual(self.app.site(self.params(radius=60))["summary"]["candidate_sites"], a["summary"]["candidate_sites"])
+
+    def test_hospital_name_is_geocoded(self):
+        fake = {"lat": self.durham[0], "lon": self.durham[1], "address": "1 Test Rd, Durham, NC"}
+        with patch("server.geocode.locate", return_value=fake) as locate:
+            plan = self.app.site({"hospital_name": "Test Hospital", "radius": 30, "travel_target": 20})
+        locate.assert_called_once_with("Test Hospital")
+        self.assertEqual(plan["hospital"]["address"], fake["address"])
+
+    def test_validation(self):
+        for bad in [{"radius": 25}, {"lat": 10}, {"days": 11}, {"days": 0}, {"staff_count": 1}, {"clinical_hours": 20}, {"date_start": "2026-12-02", "date_end": "2026-12-01"}]:
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                self.app.site(self.params(**bad))
+
+
+class BotTests(unittest.TestCase):
+    PLANS = [{"hospital": {"name": "Test Hospital"}, "clinics": [
+        {"id": "a", "name": "Near Library", "address": "1 Main St", "city": "Raleigh", "county": "Wake", "lat": 35.78, "lon": -78.64, "date": "2026-11-02", "service": "blood-pressure"},
+        {"id": "b", "name": "Far Library", "address": "2 Oak St", "city": "Asheville", "county": "Buncombe", "lat": 35.6, "lon": -82.55, "date": "2026-10-20", "service": "blood-pressure"},
+        {"id": "c", "name": "Old Library", "address": "3 Elm St", "city": "Raleigh", "county": "Wake", "lat": 35.78, "lon": -78.64, "date": "2026-01-05", "service": "diabetes"}]}]
+
+    def test_filters_past_dates_and_service_and_ranks_by_distance(self):
+        from planner import bot
+        today = date(2026, 10, 10)
+        near = bot.upcoming(self.PLANS, "blood-pressure", {"lat": 35.78, "lon": -78.64}, today)
+        self.assertEqual([c["id"] for c in near], ["a", "b"])
+        self.assertEqual(bot.upcoming(self.PLANS, "diabetes", None, today), [])
+        self.assertEqual([c["id"] for c in bot.upcoming(self.PLANS, None, None, today)], ["b", "a"])
+
+    def talk(self, store, text, **kw):
+        from planner import bot
+        with patch("planner.bot.gemini.available", return_value=False), \
+                patch("planner.bot.geocode.locate_place", return_value={"lat": 35.78, "lon": -78.64, "label": "Raleigh, NC, USA"}):
+            return bot.handle(self.PLANS, store, {"sender": "imessage:+15550001", "text": text, **kw})["reply"]
+
+    def test_new_person_is_onboarded_and_acknowledged(self):
+        from planner.subscribers import Subscribers
+        with tempfile.TemporaryDirectory() as d:
+            store = Subscribers(Path(d) / "s.json")
+            self.assertIn("what's your name", self.talk(store, "yo").lower())     # greeting is not a name
+            self.assertIn("city or ZIP", self.talk(store, "Maria"))
+            self.assertIn("Which free clinics", self.talk(store, "Raleigh"))
+            done = self.talk(store, "blood pressure and diabetes")
+            self.assertIn("I'll text you", done)
+            self.assertIn("Maria", done)
+            person = store.get("imessage:+15550001")
+            self.assertEqual((person["name"], person["stage"], sorted(person["services"])), ("Maria", "done", ["blood-pressure", "diabetes"]))
+            self.assertIn("Hi Maria", self.talk(store, "hey"))
+            self.assertIn("unsubscribed", self.talk(store, "STOP"))
+            self.assertTrue(store.get("imessage:+15550001")["stopped"])
+
+    def test_notifications_only_reach_matching_opted_in_people(self):
+        from planner import bot
+        from planner.subscribers import Subscribers
+        with tempfile.TemporaryDirectory() as d:
+            store = Subscribers(Path(d) / "s.json")
+            base = {"name": "A", "lat": 35.78, "lon": -78.64, "stage": "done", "stopped": False, "language": "eng"}
+            store.put("near-bp", {**base, "services": ["blood-pressure"]})
+            store.put("near-diabetes", {**base, "services": ["diabetes"]})
+            store.put("far-bp", {**base, "lat": 35.6, "lon": -82.55, "services": ["blood-pressure"]})
+            store.put("stopped", {**base, "services": ["blood-pressure"], "stopped": True})
+            clinic = self.PLANS[0]["clinics"][0]
+            with patch("planner.bot.gemini.available", return_value=False):
+                out = bot.notifications(store, clinic)
+        self.assertEqual([m["sender"] for m in out], ["near-bp"])
+
+    def test_signup_normalizes_phone_requires_consent_and_queues_welcome(self):
+        from planner import bot
+        from planner.subscribers import Subscribers
+        good = {"name": "Maria", "phone": "(919) 555-0123", "place": "Raleigh", "services": ["diabetes"], "consent": True, "language": "eng"}
+        with tempfile.TemporaryDirectory() as d, patch("planner.bot.gemini.available", return_value=False), \
+                patch("planner.bot.geocode.locate_place", return_value={"lat": 35.78, "lon": -78.64, "label": "Raleigh, NC, USA"}):
+            store = Subscribers(Path(d) / "s.json")
+            for bad in [{"consent": False}, {"phone": "123"}, {"name": ""}]:
+                with self.subTest(bad=bad), self.assertRaises(ValueError):
+                    bot.signup(store, {**good, **bad})
+            bot.signup(store, good)
+            self.assertEqual(store.get("+19195550123")["services"], ["diabetes"])
+            self.assertEqual([m["sender"] for m in store.drain()], ["+19195550123"])
+            bot.signup(store, good)                       # signing up twice does not text twice
+            self.assertEqual(store.drain(), [])
+
+    def test_voice_in_voice_out(self):
+        import base64
+        from planner import bot
+        from planner.subscribers import Subscribers
+        with tempfile.TemporaryDirectory() as d, patch("planner.bot.gemini.available", return_value=False), \
+                patch("planner.bot.geocode.locate_place", return_value=None), \
+                patch("planner.bot.elevenlabs.transcribe", return_value={"text": "presion arterial", "language": "spa"}), \
+                patch("planner.bot.elevenlabs.synthesize", return_value=b"mp3"), patch("planner.bot.elevenlabs.to_m4a", return_value=(b"m4a", "audio/mp4")):
+            voice = bot.handle(self.PLANS, Subscribers(Path(d) / "s.json"), {"sender": "v", "audio_b64": base64.b64encode(b"x").decode(), "mime": "audio/mp4"})
+            self.assertEqual((voice["mode"], voice["language"], voice["audio_mime"]), ("voice", "spa", "audio/mp4"))
+            self.assertEqual(base64.b64decode(voice["audio_b64"]), b"m4a")
+            with self.assertRaises(ValueError):
+                bot.handle(self.PLANS, Subscribers(Path(d) / "s.json"), {})
+
+
+class PlanChatTests(unittest.TestCase):
+    def test_context_has_what_ifs_and_communities_and_needs_gemini(self):
+        from planner import planchat
+        app = Application(runtime_dir=tempfile.mkdtemp())
+        durham = app.county_centers()["37063"]
+        params = {"lat": durham[0], "lon": durham[1], "radius": 30, "travel_target": 20, "days": 2}
+        ctx = planchat.context(app.state, app.routes, params)
+        changes = [s["change"] for s in ctx["what_if_scenarios"]]
+        self.assertIn("current plan", changes)
+        self.assertIn("patient travel target 15 min", changes)
+        self.assertTrue(ctx["communities"]["prioritized"])
+        self.assertEqual(ctx["what_if_scenarios"][0]["adults_newly_in_reach"], ctx["summary"]["adults_newly_served"])
+        with patch("planner.planchat.gemini.available", return_value=False), self.assertRaises(RuntimeError):
+            planchat.answer(app.state, app.routes, params, [{"role": "user", "text": "why?"}])
+
+
 class StatewideTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
