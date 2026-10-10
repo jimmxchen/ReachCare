@@ -1,0 +1,11 @@
+{
+  "name": "reachcare-photon-bridge",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=../.env photon.mjs"
+  },
+  "dependencies": {
+    "spectrum-ts": "^12.10.1"
+  }
+}
