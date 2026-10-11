@@ -2,17 +2,15 @@
 from __future__ import annotations
 
 import json
-import os
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
-from urllib.parse import quote_plus, urlencode
-from zoneinfo import ZoneInfo
+from .catalog import STATE_NAMES
 
 FEEDS = {
-    "nws-alerts": {"url": "https://api.weather.gov/alerts/active?area=NC", "title": "National Weather Service alerts", "ttl": 900},
-    "ncdot-incidents": {"url": "https://www.drivenc.gov/api/v2/get/event", "title": "DriveNC / NCDOT road events", "ttl": 300},
+    "nws-alerts": {"url": "https://api.weather.gov/alerts/active", "title": "National Weather Service active alerts", "ttl": 900},
 }
+STATE_FIPS = dict(zip(STATE_NAMES, "01 02 04 05 06 08 09 10 11 12 13 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 44 45 46 47 48 49 50 51 53 54 55 56".split()))
 
 
 def get_json(url):
@@ -24,38 +22,18 @@ def get_json(url):
 def refresh(store):
     def update(item):
         name, config = item
-        developer_key = ""
         try:
-            url = config["url"]
-            if name == "ncdot-incidents":
-                developer_key = os.environ.get("DRIVENC_API_KEY", "").strip()
-                if not developer_key:
-                    raise ValueError("DriveNC developer key required. Set DRIVENC_API_KEY locally and restart. Setup: https://drivenc.gov/help/endpoint/event")
-                url += "?" + urlencode({"key": developer_key, "format": "json"})
-            raw = get_json(url)
-            if name == "nws-alerts":
-                features = raw.get("features")
-                if not isinstance(features, list):
-                    raise ValueError("NWS response lacks alert features")
-                values = [{"id": f["id"], **{k: f["properties"].get(k) for k in ["event", "headline", "severity", "effective", "onset", "expires", "ends", "areaDesc", "geocode", "description"]}, "geometry": f.get("geometry")} for f in features]
-                data = {"count": len(values), "items": values, "source": config["url"]}
-                observed_at = max((v.get("effective") or "" for v in values), default=None)
-            else:
-                values = raw if isinstance(raw, list) else raw.get("incidents", raw.get("results"))
-                if not isinstance(values, list):
-                    raise ValueError("DriveNC did not return a road-event list; check developer-key access")
-                data = {"count": len(values), "items": values, "source": config["url"], "route_match": "Not matched to cached paths; review warning only"}
-                updated = [v.get("LastUpdated") for v in values if isinstance(v.get("LastUpdated"), (int, float))]
-                observed_at = datetime.fromtimestamp(max(updated), timezone.utc).isoformat() if updated else None
+            raw = get_json(config["url"])
+            features = raw.get("features")
+            if not isinstance(features, list):
+                raise ValueError("NWS response lacks alert features")
+            values = [{"id": f["id"], **{k: f["properties"].get(k) for k in ["event", "headline", "severity", "effective", "onset", "expires", "ends", "areaDesc", "geocode", "description"]}, "geometry": f.get("geometry")} for f in features]
+            data = {"count": len(values), "items": values, "source": config["url"]}
+            observed_at = max((v.get("effective") or "" for v in values), default=None)
             store.observation(name, data, observed_at or None)
         except Exception as exc:
-            # The documented endpoint uses a query key. Keep it out of errors,
-            # saved observations, and exported input snapshots.
-            message = str(exc)
-            if developer_key:
-                message = message.replace(developer_key, "[redacted]").replace(quote_plus(developer_key), "[redacted]")
-            store.observation(name, None, error=message)
-    with ThreadPoolExecutor(max_workers=2) as pool:
+            store.observation(name, None, error=str(exc))
+    with ThreadPoolExecutor(max_workers=1) as pool:
         list(pool.map(update, FEEDS.items()))
     return states(store)
 
@@ -85,16 +63,23 @@ def weather_blocks(venues, signals, config):
     blocks, matched = {}, []
     if not signal or signal["stale"] or not signal.get("data"):
         return blocks, matched
+    fips_by_state = STATE_FIPS
     for alert in signal["data"]["items"]:
-        counties = {str(value)[-5:] for value in (alert.get("geocode") or {}).get("SAME", []) if str(value)[-5:].startswith("37")}
-        counties |= {"37" + value[3:] for value in (alert.get("geocode") or {}).get("UGC", []) if value.startswith("NCC") and len(value) == 6}
+        counties = set()
+        for value in (alert.get("geocode") or {}).get("SAME", []):
+            code = str(value)[-5:]
+            if len(code) == 5 and code[:2] in set(STATE_FIPS.values()):
+                counties.add(code)
+        for value in (alert.get("geocode") or {}).get("UGC", []):
+            state_abbr, county = str(value)[:2], str(value)[2:]
+            if state_abbr in fips_by_state and len(county) == 3 and county.isdigit():
+                counties.add(fips_by_state[state_abbr] + county)
         try:
             onset = datetime.fromisoformat(alert.get("onset") or alert["effective"])
             end = datetime.fromisoformat(alert.get("ends") or alert["expires"])
             # County warnings conservatively cover each intersecting local calendar day.
-            local_zone = ZoneInfo("America/New_York")
-            start_date = onset.astimezone(local_zone).date() if onset.tzinfo else onset.date()
-            end_date = end.astimezone(local_zone).date() if end.tzinfo else end.date()
+            start_date = onset.date()
+            end_date = end.date()
         except (KeyError, TypeError, ValueError):
             continue
         for venue in venues:

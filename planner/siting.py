@@ -10,10 +10,9 @@ from datetime import date, timedelta
 
 import numpy as np
 
-from .model import SERVICES
+from .model import SERVICES, travel_minutes_matrix
 
-# Straight-line miles per driving minute. Roughly 35 mph of effective straight-line
-# progress once road circuity and rural speeds are folded in.
+# Straight-line distance converted to estimated driving minutes with a fixed national factor.
 MILES_PER_MINUTE = 0.58
 EARTH_MILES = 3958.8
 RADII = (15, 30, 45, 60)
@@ -31,7 +30,7 @@ def _haversine(lat, lon, lats, lons):
 
 
 def validate(params):
-    p = {"service": "blood-pressure", "hospital_name": "Hospital", "radius": 30, "travel_target": 30,
+    p = {"service": "blood-pressure", "hospital_name": "Hospital", "state": "US", "radius": 30, "travel_target": 30,
          "days": 3, "staff_count": 3, "clinical_hours": 4, "services_per_staff_hour": 5,
          "health_weight": .7, "use_existing_care": True}
     p.update({k: v for k, v in params.items() if v is not None})
@@ -40,8 +39,8 @@ def validate(params):
     for key in ("lat", "lon"):
         if not isinstance(p.get(key), (int, float)) or isinstance(p.get(key), bool) or not math.isfinite(p[key]):
             raise ValueError("Choose the hospital location on the map or by county.")
-    if not (33.5 <= p["lat"] <= 37.0 and -84.8 <= p["lon"] <= -75.0):
-        raise ValueError("The hospital location must be inside North Carolina.")
+    if not (17 <= p["lat"] <= 72 and -180 <= p["lon"] <= -64):
+        raise ValueError("Choose a hospital location in the United States.")
     ranges = {"radius": (15, 60), "travel_target": (5, 60), "days": (1, MAX_CLINICS), "health_weight": (0, 1),
               "staff_count": (1, 100), "clinical_hours": (.5, 12), "services_per_staff_hour": (.1, 100)}
     for key, (lo, hi) in ranges.items():
@@ -114,14 +113,17 @@ def site_clinics(state, routes, params):
     if not in_area.any():
         raise ValueError("No census tracts fall inside that radius. Try a larger driving radius.")
 
-    # Existing safety-net access, using the cached OSRM road times (not straight-line distance).
     baseline = np.zeros(len(tracts), dtype=bool)
-    if p["use_existing_care"]:
-        index = {t["id"]: i for i, t in enumerate(state["tracts"])}
-        rows = [index[t["id"]] for t in tracts]
-        care_cols = slice(len(state["venues"]), routes.shape[1])
-        with np.errstate(invalid="ignore"):
-            baseline = np.nanmin(np.where(np.isfinite(routes[rows][:, care_cols]), routes[rows][:, care_cols], np.inf), axis=1) <= p["travel_target"]
+    if p["use_existing_care"] and state["existing_services"]:
+        area_indices = np.flatnonzero(in_area)
+        area_tracts = [tracts[i] for i in area_indices]
+        care = [s for s in state["existing_services"] if s.get("lat") is not None and s.get("lon") is not None
+                and _haversine(p["lat"], p["lon"], np.array([s["lat"]]), np.array([s["lon"]]))[0] <= hospital_radius + target_radius]
+        nearest = np.full(len(area_tracts), np.inf)
+        for start in range(0, len(care), 128):
+            distances = travel_minutes_matrix(area_tracts, care[start:start + 128])
+            nearest = np.minimum(nearest, distances.min(axis=1))
+        baseline[area_indices] = nearest <= p["travel_target"]
 
     candidates = [v for v in state["venue_directory"] if v.get("lat") is not None
                   and _haversine(p["lat"], p["lon"], np.array([v["lat"]]), np.array([v["lon"]]))[0] <= hospital_radius]
@@ -209,6 +211,6 @@ def site_clinics(state, routes, params):
         "tracts": [[t["id"], round(float(health[j] * p["health_weight"] + barrier[j] * (1 - p["health_weight"])), 3), str(status[j])]
                    for j, t in enumerate(tracts) if in_area[j]],
         "method": {"miles_per_minute": MILES_PER_MINUTE, "staff_hourly_cost": STAFF_HOURLY_COST, "event_fixed_cost": EVENT_FIXED_COST, "weights_tested": list(WEIGHT_GRID),
-                   "note": "Hospital radius and clinic reach use straight-line distance converted at "
-                           f"{MILES_PER_MINUTE} mi per driving minute; existing-care access uses cached road times."},
+                   "note": "Hospital radius, clinic reach, and existing-care access use straight-line distance converted at "
+                           f"{MILES_PER_MINUTE} mi per estimated driving minute. This is a planning approximation, not turn-by-turn routing."},
     }

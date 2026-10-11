@@ -49,7 +49,7 @@ def understand(text):
         return fallback
     names = "; ".join(f'"{k}" = {v["name"]}' for k, v in SERVICES.items())
     prompt = ("A person texted a free-clinic finder. Return JSON with keys: service (one of the keys below or null if they did "
-              "not name a health service), place (the city, town, county or ZIP code in North Carolina they mention, or null), "
+              "not name a health service), place (the city, town, county or ZIP code in the United States they mention, or null), "
               f"language (ISO 639-3 code of the language the message is written in). Services: {names}.\n\nMessage: {text[:600]}")
     try:
         data = json.loads(gemini.generate(prompt, as_json=True))
@@ -187,7 +187,7 @@ def _parse(text, stage):
     prompt = (PERSONA + " Classify the person's latest message. Return JSON with keys: "
               "intent (one of: greeting, ask_clinic, provide_info, stop, start, update, help, medical, other), "
               "name (the person's first name if they gave it, else null), "
-              "place (a North Carolina city, town, county or ZIP code if they gave one, else null), "
+              "place (a US city, town, county or ZIP code if they gave one, else null), "
               f"services (list of any of {list(SERVICES)} they are interested in; all of them if they say all/any), "
               "language (ISO 639-3 code of the message language, or null if the message is too short to tell). "
               "Greetings like 'yo', 'hey', 'hi' are intent greeting, never a name. "
@@ -252,12 +252,12 @@ def _clinic_answer(plans, profile, parsed, text, proposed=False, language="eng")
 def _browser_conversation(text, proposed):
     """Answer conversational browser messages without enrolling someone in alerts."""
     fallback = ("Hi! I'm doing well, thanks for asking. " if "how are you" in text.lower() else "Hi! ")
-    fallback += ("I can help you explore proposed free clinic plans in North Carolina. What would you like to know?"
-                 if proposed else "I can help you find free clinics in North Carolina. What would you like to know?")
+    fallback += ("I can help you explore proposed free clinic plans across the United States. What would you like to know?"
+                 if proposed else "I can help you find free clinics across the United States. What would you like to know?")
     if not gemini.available():
         return fallback
     prompt = (PERSONA + " You are chatting in a browser. Reply naturally to the person's message in 1-2 sentences. "
-              "If they ask how you are, answer politely. You can help with North Carolina free clinic plans. "
+              "If they ask how you are, answer politely. You can help with US community clinic plans. "
               "No clinic facts are provided here, so do not invent locations, dates, or availability. "
               "Do not ask for a name, phone number, or subscription. Reply in English; translation happens separately. "
               + ("The hosted browser only shows proposed plans, not confirmed events. " if proposed else "")
@@ -302,7 +302,7 @@ def converse(plans, store, sender, text, language_hint=None, preview=False):
             return finish(reply, localized)
         if intent == "greeting":
             return finish(("Hi! I'm doing well, thanks for asking. " if "how are you" in text.lower() else "Hi! ") +
-                          "I can help you explore proposed free clinic plans in North Carolina. What would you like to know?")
+                          "I can help you explore proposed free clinic plans across the United States. What would you like to know?")
         return finish(_browser_conversation(text, proposed=True))
 
     if intent == "stop":
@@ -332,9 +332,9 @@ def converse(plans, store, sender, text, language_hint=None, preview=False):
         return finish(reply, localized)
 
     if first_contact:
-        intro = ("Hi! I'm ReachCare. I help you explore proposed free clinic plans in North Carolina. "
+        intro = ("Hi! I'm ReachCare. I help you explore proposed free clinic plans across the United States. "
                  "This browser demo does not send text alerts." if preview else
-                 "Hi! I'm ReachCare. I help you find free community health clinics in North Carolina, "
+                 "Hi! I'm ReachCare. I help you find free community health clinics across the United States, "
                  "and I can text you when one is scheduled near you.")
         if intent == "ask_clinic":
             reply, match, localized = _clinic_answer(plans, profile, parsed, text, preview, language)
@@ -352,7 +352,7 @@ def converse(plans, store, sender, text, language_hint=None, preview=False):
         if where:
             profile.update(place=where["label"].replace(", USA", ""), lat=where["lat"], lon=where["lon"], stage="services")
             return finish(f"Got it, {profile['place']}. {PROMPTS['services']}")
-        return finish("I couldn't find that in North Carolina. Try a city name or a 5-digit ZIP code.")
+        return finish("I couldn't find that in the United States. Try a city name or a 5-digit ZIP code.")
     if stage == "services":
         if parsed["services"]:
             profile.update(services=parsed["services"], stage="done", stopped=False)
@@ -447,7 +447,7 @@ def signup(store, payload):
     """Web sign-up: add someone to the announcement list and queue a welcome text."""
     phone = normalize_phone(payload.get("phone", ""))
     if not phone:
-        raise ValueError("Enter a valid mobile number, like (919) 555-0123.")
+        raise ValueError("Enter a valid mobile number, like (555) 555-0123.")
     if payload.get("consent") is not True:
         raise ValueError("Please agree to receive text messages to sign up.")
     name = " ".join(str(payload.get("name", "")).split())[:40]
@@ -456,7 +456,7 @@ def signup(store, payload):
     services = [s for s in payload.get("services", []) if s in SERVICES] or list(SERVICES)
     where = geocode.locate_place(str(payload.get("place", "")))
     if not where:
-        raise ValueError("We couldn't find that place in North Carolina. Try a city name or ZIP code.")
+        raise ValueError("We couldn't find that place in the United States. Try a city name or ZIP code.")
     language = str(payload.get("language") or "eng")[:3].lower()
     existing = store.get(phone)
     now = datetime.now(timezone.utc).isoformat()
