@@ -36,7 +36,7 @@ SERVICES = {
         "short_label": "COPD",
     },
     "asthma": {
-        "name": "Asthma care and education", "indicator": "casthma",
+        "name": "Asthma education and support", "indicator": "casthma",
         "indicator_label": "Adults reporting current asthma",
         "eligible_group": "Adults 18 and older", "benchmark": [8.5, 14.5],
         "minimum_staff": 2, "equipment": "Peak-flow meters and inhaler demonstration kits",

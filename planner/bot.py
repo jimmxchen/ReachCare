@@ -121,12 +121,13 @@ def compose(f, language):
 
 
 PERSONA = (
-    "You are ReachCare, a friendly assistant that helps North Carolinians find FREE community health clinics (blood-pressure, "
-    "diabetes, COPD/lung and asthma screenings) hosted by local hospitals. You are not a doctor and never give medical advice."
+    "You are ReachCare, a friendly assistant that helps North Carolinians find FREE community health clinics "
+    "(blood-pressure, diabetes, and COPD/lung screenings, plus asthma education and support) hosted by local hospitals. "
+    "You are not a doctor and never give medical advice."
 )
 GREETINGS = {"hi", "hello", "hey", "yo", "sup", "hola", "hii", "heya", "howdy", "yo!", "hi!", "hello!", "hey!", "start", "help", "?"}
 STOP_WORDS = {"stop", "unsubscribe", "cancel", "quit", "end", "alto", "parar"}
-SERVICE_LIST = "blood pressure, diabetes, lung health (COPD), asthma"
+SERVICE_LIST = "blood pressure, diabetes, lung health (COPD), asthma education and support"
 PROMPTS = {
     "name": "What's your name?",
     "place": "What city or ZIP code are you in? I'll use it to find clinics near you.",
