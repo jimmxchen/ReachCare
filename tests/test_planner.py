@@ -319,6 +319,12 @@ class BotTests(unittest.TestCase):
         self.assertEqual(bot.upcoming(self.PLANS, "diabetes", None, today), [])
         self.assertEqual([c["id"] for c in bot.upcoming(self.PLANS, None, None, today)], ["b", "a"])
 
+    def test_generic_clinic_answer_does_not_repeat_free_clinic(self):
+        from planner import bot
+        reply = bot.english_reply({"found": False, "service": "free clinic"})
+        self.assertIn("upcoming free clinic", reply)
+        self.assertNotIn("free free clinic", reply)
+
     def talk(self, store, text, **kw):
         from planner import bot
         with patch("planner.bot.gemini.available", return_value=False), \

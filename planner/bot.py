@@ -91,14 +91,17 @@ def facts_for(matches, service, where, asked_place):
 
 
 def english_reply(f, proposed=False):
+    clinic = ("free clinic" if f["service"] == "free clinic" else f"free {f['service']} clinic")
+    if proposed:
+        clinic = "proposed " + clinic
     if not f["found"]:
         if proposed:
-            return f"I don't see an upcoming proposed {f['service']} clinic in this browser demo. Create a plan in Plan a clinic first."
-        return f"I don't see an upcoming free {f['service']} clinic scheduled yet. Please check back soon."
+            return f"I don't see an upcoming {clinic} in this browser demo. Create a plan in Plan a clinic first."
+        return f"I don't see an upcoming {clinic} scheduled yet. Please check back soon."
     if f.get("far"):
-        text = f"I don't see a {'proposed ' if proposed else 'free '}{f['service']} clinic within 60 miles. The closest one is on"
+        text = f"I don't see a {clinic} within 60 miles. The closest one is on"
     else:
-        text = f"The next {'proposed ' if proposed else 'free '}{f['service']} clinic is on"
+        text = f"The next {clinic} is on"
     text += f" {f['date']} at {f['name']}, {f['address']}"
     text += f" ({f['miles_away']} miles away)." if f.get("miles_away") is not None else "."
     if f.get("hosted_by"):
@@ -368,8 +371,9 @@ def translate(reply, language):
         return reply
     try:
         return gemini.generate(
-            f"Rewrite this text message in {language_name(language)}. Translate weekday and month names, but keep every number, "
-            f"clinic name, hospital name, street address and the words STOP, START, UPDATE, HELP and ALL exactly as written. "
+            f"Translate this entire text message into natural {language_name(language)}. Translate generic phrases such as "
+            f"'free clinic' and weekday and month names. Keep numbers, proper clinic and hospital names, street addresses, "
+            f"and the commands STOP, START, UPDATE, HELP and ALL exactly as written. "
             f"Reply with only the message.\n\n{reply}").strip()
     except RuntimeError:
         return reply

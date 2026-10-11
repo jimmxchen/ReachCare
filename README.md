@@ -65,7 +65,7 @@ Data: U.S. Census ACS 2024, CDC PLACES 2025, IMLS library outlets FY2024, NC DHH
 | Frontend | Plain HTML, CSS and JavaScript, with a custom SVG map (no framework or build step) |
 | iMessage bridge | Node.js 20+ and `spectrum-ts` |
 | Storage | JSON files and SQLite in the git-ignored `.runtime/` folder |
-| Tests | Python `unittest` (40 tests) |
+| Tests | Python `unittest` (41 tests) |
 
 ## Run it
 
