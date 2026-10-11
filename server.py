@@ -35,58 +35,64 @@ class Application:
         gemini._load_env()
         data_dir = Path(data_dir or ROOT / "data")
         self.data_dir = data_dir
-        self.state = json.loads((data_dir / "nc.json").read_text())
-        self.routing = json.loads((data_dir / "routing-metadata.json").read_text())
-        archive = np.load(data_dir / "routes.npz")
-        self.routes = archive["minutes"]
-        if list(archive["tract_ids"]) != [t["id"] for t in self.state["tracts"]] or list(archive["site_ids"]) != [s["id"] for s in self.state["venues"] + self.state["existing_services"]]:
-            raise ValueError("Routing IDs do not align with the dataset. Rebuild the matrix.")
         self.store = Store(Path(runtime_dir or ROOT / ".runtime") / "planner.sqlite3")
-        self.catalog = NationalCatalog(data_dir / "us.sqlite3.gz", Path(runtime_dir or ROOT / ".runtime")) if (data_dir / "us.sqlite3.gz").is_file() else None
-        self.store.seed(self.state, self.routing)
+        archive = data_dir / "us.sqlite3.gz"
+        if not archive.is_file():
+            raise FileNotFoundError(archive)
+        self.catalog = NationalCatalog(archive, Path(runtime_dir or ROOT / ".runtime"))
+        self.routing = {"source": "Census tract and site coordinates", "profile": "estimated straight-line", "live_closure_aware": False}
         self.subscribers = Subscribers(Path(runtime_dir or ROOT / ".runtime") / "subscribers.json")
         self.signup_times = []
         self.run_lock = threading.Lock()
         self.feed_lock = threading.Lock()
 
-    def county_centers(self):
+    def county_centers(self, state_code):
         sums = {}
-        for t in self.state["tracts"]:
+        for t in self.current_state(state_code)["tracts"]:
             if t.get("lat") is not None and t.get("eligible_population"):
                 w = t["eligible_population"]
                 a = sums.setdefault(t["county_id"], [0, 0, 0])
                 a[0] += t["lat"] * w; a[1] += t["lon"] * w; a[2] += w
         return {k: [round(a[0] / a[2], 4), round(a[1] / a[2], 4)] for k, a in sums.items() if a[2]}
 
-    def current_state(self):
-        state = copy.deepcopy(self.state)
+    def current_state(self, state_code):
+        state = self.catalog.planner_state(state_code)
         saved = {s["id"]: s for s in self.store.records("existing_services")}
         state["existing_services"] = [saved.get(s["id"], s) for s in state["existing_services"]]
         return state
 
     def bootstrap(self):
-        state = self.current_state()
-        return {"config": default_config(), "services": SERVICES, "counties": state["counties"],
-                "tracts": state["tracts"], "venues": state["venues"], "existing_services": state["existing_services"],
-                "sources": state["sources"], "quality_issues": state["quality_issues"], "routing": self.routing,
-                "candidate_selection": state["candidate_selection"], "venue_operations": {v["id"]: v for v in self.store.records("venue_verifications")},
-                "demo_operations": demo_operations(state["venues"]), "runs": self.store.list_runs(),
-                "feeds": feeds.states(self.store), "outcomes": self.store.outcomes(), "series": self.store.records("historical_series")}
+        return {"config": default_config(), "services": SERVICES, "states": self.catalog.states(),
+                "runs": self.store.list_runs(), "feeds": feeds.states(self.store),
+                "outcomes": self.store.outcomes(), "series": self.store.records("historical_series")}
 
     def run(self, config, reason="Planner configuration updated"):
         with self.run_lock:
-            state = self.current_state()
+            region = config.get("region", "US")
+            if region in ("", "US"):
+                raise ValueError("Choose a state or district before running a plan.")
+            if not isinstance(region, str):
+                raise ValueError("Choose a state, district, or county from the national catalog.")
+            if len(region) == 2 and region.isalpha():
+                region = region.upper()
+                config = {**config, "region": region}
+                state_code = region
+            else:
+                state_code = next((s["code"] for s in self.catalog.states() if region.startswith(s["fips"])), "")
+                if not state_code:
+                    raise ValueError("Choose a county FIPS ID from the national catalog.")
+            state = self.current_state(state_code)
             operations = {v["id"]: v for v in self.store.records("venue_verifications")}
             series = self.store.records("historical_series")
             signals = feeds.states(self.store)
             weather_blocks, matched_alerts = feeds.weather_blocks(state["venues"], signals, config)
-            result = run_plan(state, self.routes, config, operations, series, weather_blocks)
+            self.store.seed(state, {**self.routing, "sha256": "coordinate-derived"})
+            result = run_plan(state, None, config, operations, series, weather_blocks)
             result["matched_weather_alerts"] = matched_alerts
             result.update(refreshed_at=max((f["retrieved_at"] or "" for f in signals), default="") or None,
                           stale_inputs=[f["title"] for f in signals if f["stale"]], feeds=signals, routing=self.routing)
             snapshot = {"state": state, "config": result["config"], "operations": operations, "observations": series,
-                        "road_times_minutes": np.where(np.isfinite(self.routes), self.routes, None).tolist(),
-                        "routing": self.routing, "feeds": signals, "weather_blocks": weather_blocks, "model_version": MODEL_VERSION,
+                        "travel_time_method": self.routing, "feeds": signals, "weather_blocks": weather_blocks, "model_version": MODEL_VERSION,
                         "numpy_version": np.__version__}
             digest = input_hash(snapshot)
             previous = self.store.list_runs()
@@ -101,9 +107,14 @@ class Application:
             return self.store.save_run(snapshot, result, digest, reason)
 
     def site(self, params):
+        state_code = str(params.get("state", "")).upper()
+        if state_code not in {s["code"] for s in self.catalog.states()}:
+            raise ValueError("Choose a state or district before planning.")
         if params.get("lat") is None or params.get("lon") is None:
-            params = {**params, **geocode.locate(params.get("hospital_name", ""))}
-        plan = siting.site_clinics(self.state, self.routes, params)
+            params = {**params, **geocode.locate(params.get("hospital_name", ""), state_code)}
+        state = self.current_state(state_code)
+        self.store.seed(state, {**self.routing, "sha256": "coordinate-derived"})
+        plan = siting.site_clinics(state, None, params)
         plan["created_at"] = datetime.now(timezone.utc).isoformat()
         with self.run_lock:
             path = Path(self.store.path).parent / "clinic_plans.json"
@@ -117,15 +128,16 @@ class Application:
         path = Path(self.store.path).parent / "clinic_plans.json"
         return json.loads(path.read_text()) if path.is_file() else []
 
-    def import_csv(self, kind, contents):
+    def import_csv(self, kind, contents, state_code):
         if not isinstance(contents, str) or len(contents) > 1000000:
             raise ValueError("CSV must be a text file under 1 MB.")
         rows = list(csv.DictReader(io.StringIO(contents.lstrip("\ufeff"))))
         if not rows or len(rows) > 10000:
             raise ValueError("Upload a CSV with 1–10,000 rows.")
         parsed, errors = [], []
-        venues = {v["id"] for v in self.state["venues"]}
-        care = {s["id"]: s for s in self.state["existing_services"]}
+        state = self.current_state(state_code)
+        venues = {v["id"] for v in state["venues"]}
+        care = {s["id"]: s for s in state["existing_services"]}
         def flag(row, key):
             value = row.get(key, "").strip().lower()
             if value not in ["true", "false", "1", "0", "yes", "no", ""]:
@@ -168,7 +180,7 @@ class Application:
                         raise ValueError("Historical-series metadata is incomplete")
                     if row["service"] not in SERVICES or row["geography_type"] not in ["county", "tract"]:
                         raise ValueError("Series must match a configured service and county or tract geography")
-                    valid_geo = self.state["counties"] if row["geography_type"] == "county" else {t["id"] for t in self.state["tracts"]}
+                    valid_geo = state["counties"] if row["geography_type"] == "county" else {t["id"] for t in state["tracts"]}
                     if row["geography_id"] not in valid_geo:
                         raise ValueError("Geography ID does not match; ZIP codes are not converted to tracts")
                     start, end = date.fromisoformat(row["period_start"]), date.fromisoformat(row["period_end"])
@@ -297,13 +309,13 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/api/outcomes":
                 self.json_response(self.app.store.outcomes())
             elif path == "/api/clinic-options":
-                self.json_response({"counties": self.app.state["counties"], "services": {k: v["name"] for k, v in SERVICES.items()},
+                self.json_response({"states": self.app.catalog.states(), "services": {k: v["name"] for k, v in SERVICES.items()},
                                     "radii": list(siting.RADII), "gemini": gemini.available(), "maps": geocode.available(),
                                     "alerts": not bool(os.environ.get("VERCEL")), "hosted_preview": bool(os.environ.get("VERCEL")),
                                     })
             elif path == "/api/places/suggest":
                 q = parse_qs(url.query)
-                self.json_response({"suggestions": geocode.suggest(q.get("q", [""])[0], q.get("session", [None])[0])})
+                self.json_response({"suggestions": geocode.suggest(q.get("q", [""])[0], q.get("session", [None])[0], q.get("state", [None])[0])})
             elif path == "/api/places/details":
                 q = parse_qs(url.query)
                 self.json_response(geocode.place_details(q.get("id", [""])[0], q.get("session", [None])[0]))
@@ -314,7 +326,7 @@ class Handler(BaseHTTPRequestHandler):
                 base = self.app.data_dir if path.startswith("/data/") else ROOT / "web"
                 relative = path[6:] if path.startswith("/data/") else path.lstrip("/") or "index.html"
                 target = (base / relative).resolve()
-                if not target.is_relative_to(base.resolve()) or not target.is_file() or (base == self.app.data_dir and relative != "geography.json"):
+                if not target.is_relative_to(base.resolve()) or not target.is_file() or base == self.app.data_dir:
                     self.json_response({"error": "Not found"}, 404)
                     return
                 body = target.read_bytes()
@@ -394,12 +406,14 @@ class Handler(BaseHTTPRequestHandler):
                     self.json_response({"error": "Set GEMINI_API_KEY to enable AI intake."}, 503)
                     return
                 try:
-                    self.json_response(gemini.parse_intake(str(payload.get("text", "")), self.app.state["counties"]))
+                    self.json_response(gemini.parse_intake(str(payload.get("text", "")), self.app.catalog.counties()))
                 except (RuntimeError, ValueError) as exc:
                     self.json_response({"error": str(exc)}, 502)
             elif path == "/api/plan-chat":
                 try:
-                    self.json_response({"reply": planchat.answer(self.app.state, self.app.routes, payload.get("params", {}), payload.get("messages", []))})
+                    params = payload.get("params", {})
+                    state = self.app.current_state(params.get("state", ""))
+                    self.json_response({"reply": planchat.answer(state, None, params, payload.get("messages", []))})
                 except RuntimeError as exc:
                     self.json_response({"error": str(exc)}, 502)
             elif path == "/api/gemini/explain":
@@ -407,22 +421,27 @@ class Handler(BaseHTTPRequestHandler):
                     self.json_response({"error": "Set GEMINI_API_KEY to enable AI explanations."}, 503)
                     return
                 try:
-                    plan = siting.site_clinics(self.app.state, self.app.routes, payload.get("params", {}))
+                    params = payload.get("params", {})
+                    state = self.app.current_state(params.get("state", ""))
+                    plan = siting.site_clinics(state, None, params)
                     self.json_response({"text": gemini.explain(plan, str(payload.get("language", "English"))[:40])})
                 except RuntimeError as exc:
                     self.json_response({"error": str(exc)}, 502)
             elif path == "/api/runs":
                 self.json_response(self.app.run(payload.get("config", {}), payload.get("change_reason", "Planner configuration updated")), 201)
             elif path == "/api/import":
-                self.json_response(self.app.import_csv(payload.get("kind"), payload.get("csv")))
+                self.json_response(self.app.import_csv(payload.get("kind"), payload.get("csv"), payload.get("state", "")))
             elif path == "/api/refresh":
                 with self.app.feed_lock:
                     updated = feeds.refresh(self.app.store)
                 previous = self.app.store.list_runs()
-                result = self.app.run(payload.get("config", previous[0]["config"] if previous else default_config()), "Public operational feeds refreshed; cached road times remain fixed") if payload.get("replan", True) else None
+                selected_config = payload.get("config", previous[0]["config"] if previous else default_config())
+                can_replan = bool(previous) or selected_config.get("region") not in (None, "", "US")
+                result = self.app.run(selected_config, "National weather feed refreshed") if payload.get("replan", True) and can_replan else None
                 self.json_response({"feeds": updated, "run": result})
             elif path == "/api/forecast":
-                venue = next((v for v in self.app.state["venues"] if v["id"] == payload.get("site_id")), None)
+                state = self.app.current_state(payload.get("state", ""))
+                venue = next((v for v in state["venues"] + state["venue_directory"] if v["id"] == payload.get("site_id")), None)
                 if not venue:
                     raise ValueError("Unknown venue")
                 self.json_response(feeds.forecast(self.app.store, venue))
@@ -464,7 +483,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--live-feeds", action="store_true", help="Poll public NWS/NCDOT feeds every five minutes")
+    parser.add_argument("--live-feeds", action="store_true", help="Poll nationwide National Weather Service alerts every five minutes")
     parser.add_argument("--runtime-dir", type=Path, help="Directory for the local SQLite database (default: .runtime)")
     args = parser.parse_args()
     try:
