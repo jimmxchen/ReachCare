@@ -212,6 +212,22 @@ def _same_origin(origin, host):
     return origin == f"{scheme}://{host}"
 
 
+class PreviewStore:
+    """One-request conversation store for the browser demo on stateless hosting."""
+
+    def __init__(self, profile):
+        self.profile = profile
+
+    def get(self, sender):
+        return self.profile
+
+    def put(self, sender, profile):
+        self.profile = profile
+
+    def delete(self, sender):
+        self.profile = None
+
+
 class Handler(BaseHTTPRequestHandler):
     app: Application
 
@@ -238,9 +254,9 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def hosted_demo_blocks(self, path):
-        """The hosted demo is stateless; texting needs the always-on bridge, so say so instead of silently dropping data."""
-        if os.environ.get("VERCEL") and path.startswith(MESSAGING_PATHS):
-            self.json_response({"error": "Text alerts and the bot run on the ReachCare bridge, not this hosted demo. Run it locally with ./start.sh."}, 503)
+        """The hosted demo is stateless; iMessage delivery needs the always-on bridge."""
+        if os.environ.get("VERCEL") and path.startswith(MESSAGING_PATHS) and path != "/api/bot/message":
+            self.json_response({"error": "iMessage and text alerts need the ReachCare bridge; they are unavailable in this hosted demo. Run it locally with ./start.sh."}, 503)
             return True
         return False
 
@@ -273,6 +289,7 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/api/clinic-options":
                 self.json_response({"counties": self.app.state["counties"], "services": {k: v["name"] for k, v in SERVICES.items()},
                                     "radii": list(siting.RADII), "gemini": gemini.available(), "maps": geocode.available(),
+                                    "alerts": not bool(os.environ.get("VERCEL")),
                                     })
             elif path == "/api/places/suggest":
                 q = parse_qs(url.query)
@@ -324,7 +341,19 @@ class Handler(BaseHTTPRequestHandler):
             path = urlparse(self.path).path
             if path == "/api/bot/message":
                 try:
-                    self.json_response(bot.handle(self.app.plans(), self.app.subscribers, payload))
+                    if os.environ.get("VERCEL"):
+                        if not payload.get("preview") or not str(payload.get("sender", "")).startswith("web-"):
+                            self.json_response({"error": "The hosted demo supports browser chat only; iMessage needs the ReachCare bridge."}, 503)
+                            return
+                        profile, plans = payload.get("profile"), payload.get("plans", [])
+                        if (profile is not None and not isinstance(profile, dict)) or not isinstance(plans, list) or len(plans) > 5:
+                            raise ValueError("Invalid browser demo state.")
+                        store = PreviewStore(profile)
+                        result = bot.handle(plans, store, payload, preview=True)
+                        result["profile"] = store.profile
+                        self.json_response(result)
+                    else:
+                        self.json_response(bot.handle(self.app.plans(), self.app.subscribers, payload))
                 except RuntimeError as exc:
                     self.json_response({"error": str(exc)}, 502)
             elif path == "/api/bot/notify":

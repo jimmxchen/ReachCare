@@ -28,21 +28,25 @@
     <div class="join">
       <div class="side">
         <p class="eyebrow">Free clinic alerts</p>
-        <h1>Get a text when a free clinic is near you</h1>
-        <p class="lead">Sign up with your mobile number and we'll text you when a free health clinic is scheduled in your area. You can also text us questions or send a voice note in any language.</p>
+        <h1 id="join-title">Get a text when a free clinic is near you</h1>
+        <p class="lead" id="join-lead">Sign up with your mobile number and we'll text you when a free health clinic is scheduled in your area. You can also text us questions or send a voice note in any language.</p>
       </div>
       <div class="panel">
       <div id="error" class="notice error hidden" role="alert"></div>
+      <div id="unavailable" class="done hidden" role="status">
+        <h2>Signup preview</h2>
+        <p>Try the form below to see the signup flow. This demo does not collect phone numbers, save subscriptions, or send iMessages.</p>
+      </div>
 
-      <form id="join" novalidate>
+      <form id="join" class="hidden" novalidate>
         <label>First name<input name="name" type="text" maxlength="40" autocomplete="given-name" required></label>
-        <label>Mobile number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(919) 555-0123" required></label>
+        <label id="phone-field">Mobile number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(919) 555-0123" required></label>
         <label>City or ZIP code in North Carolina<input name="place" type="text" autocomplete="address-level2" placeholder="e.g. Durham or 27701" required></label>
         <fieldset class="group full" style="border-top:0;padding:0;margin:0">
           <legend style="float:none;margin:0 0 4px;text-transform:none;letter-spacing:0;font-size:13px;font-weight:500;color:var(--muted)">What are you interested in?</legend>
           <div class="checks" id="services"></div>
         </fieldset>
-        <label>Language for our texts
+        <label id="language-label">Language for our texts
           <select name="language">
             <option value="eng">English</option><option value="spa">Español</option><option value="fra">Français</option>
             <option value="por">Português</option><option value="vie">Tiếng Việt</option><option value="zho">中文</option>
@@ -51,12 +55,12 @@
           </select>
         </label>
         <label class="check consent full"><input type="checkbox" name="consent" required>
-          <span>I agree to receive text messages from ReachCare about free clinics near me. Message and data rates may apply. Reply STOP at any time to unsubscribe.</span></label>
+          <span id="consent-label">I agree to receive text messages from ReachCare about free clinics near me. Message and data rates may apply. Reply STOP at any time to unsubscribe.</span></label>
         <div class="actions full"><button type="submit" class="button primary" id="submit"><span id="label">Sign me up</span></button></div>
       </form>
 
       <div id="success" class="done hidden" role="status">
-        <h2>You're signed up</h2>
+        <h2 id="success-title">You're signed up</h2>
         <p id="success-text"></p>
       </div>
       </div>
@@ -64,6 +68,7 @@
   </main>
   <script>
     const form = document.getElementById('join'), err = document.getElementById('error');
+    let previewOnly = false;
     const names = {'blood-pressure': 'Blood-pressure screening', diabetes: 'Diabetes screening', copd: 'COPD and lung health', asthma: 'Asthma education and support'};
     const box = document.getElementById('services');
     Object.entries(names).forEach(([k, v]) => {
@@ -71,9 +76,37 @@
       i.type = 'checkbox'; i.name = 'services'; i.value = k; i.checked = true;
       l.append(i, document.createTextNode(v)); box.append(l);
     });
+    fetch('/api/clinic-options').then(r => {
+      if (!r.ok) throw new Error('Could not check whether text alerts are available.');
+      return r.json();
+    }).then(options => {
+      if (!options.alerts) {
+        previewOnly = true;
+        document.getElementById('join-title').textContent = 'Preview free clinic alerts';
+        document.getElementById('join-lead').textContent = 'Explore how residents would choose a location, services, and language for clinic updates. No information is submitted or saved in this preview.';
+        document.getElementById('unavailable').classList.remove('hidden');
+        document.getElementById('phone-field').classList.add('hidden');
+        form.elements.phone.required = false;
+        document.getElementById('language-label').firstChild.textContent = 'Language for the preview';
+        document.getElementById('consent-label').textContent = 'I understand this is a preview and no messages will be sent.';
+        document.getElementById('label').textContent = 'Preview sign-up';
+      }
+      form.classList.remove('hidden');
+    }).catch(ex => { err.textContent = ex.message; err.classList.remove('hidden'); });
     form.addEventListener('submit', async e => {
       e.preventDefault(); err.classList.add('hidden');
       const f = new FormData(form), btn = document.getElementById('submit'), label = document.getElementById('label');
+      if (!form.checkValidity()) { form.reportValidity(); return; }
+      if (previewOnly) {
+        if (!f.getAll('services').length) {
+          err.textContent = 'Choose at least one service to preview.'; err.classList.remove('hidden'); return;
+        }
+        form.classList.add('hidden');
+        document.getElementById('success-title').textContent = 'Preview complete';
+        document.getElementById('success-text').textContent = `This is how ${String(f.get('name')).trim()} could request clinic updates near ${String(f.get('place')).trim()}. No subscription was saved and no iMessage was sent.`;
+        document.getElementById('success').classList.remove('hidden');
+        return;
+      }
       btn.disabled = true; label.textContent = 'Signing you up…';
       try {
         const r = await fetch('/api/signup', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({

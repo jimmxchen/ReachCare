@@ -65,7 +65,7 @@ Data: U.S. Census ACS 2024, CDC PLACES 2025, IMLS library outlets FY2024, NC DHH
 | Frontend | Plain HTML, CSS and JavaScript, with a custom SVG map (no framework or build step) |
 | iMessage bridge | Node.js 20+ and `spectrum-ts` |
 | Storage | JSON files and SQLite in the git-ignored `.runtime/` folder |
-| Tests | Python `unittest` (33 tests) |
+| Tests | Python `unittest` (38 tests) |
 
 ## Run it
 
@@ -78,6 +78,10 @@ cp .env.example .env          # add your keys
 ```
 
 Web app only: `python3 server.py`. Pages: `/` plan, `/#/docs` how it works, `/bot.html` bot tester, `/join.html` resident sign-up.
+
+On Vercel, the browser bot uses proposed plans created in the same browser and keeps its conversation in that browser tab. The Get alerts page is an interactive signup preview: it does not collect a phone number, save a subscriber, or send a message. The local bridge still handles real iMessages. Voice notes in the browser require `ELEVENLABS_API_KEY` in the Vercel environment.
+
+Adding Photon credentials to Vercel alone does not enable live alerts. The current bridge runs continuously and keeps subscriptions and its outbox in a local JSON file. A hosted live version needs persistent subscriber storage, a Photon webhook for inbound messages and STOP requests, and outbound delivery from the hosted service. Until those pieces are configured, `/api/signup` remains disabled on Vercel.
 
 Keys in `.env`: `GOOGLE_MAPS_API_KEY`, `GEMINI_API_KEY`, `ELEVENLABS_API_KEY`, `PHOTON_PROJECT_ID`, `PHOTON_PROJECT_SECRET`. Voice replies also need `ffmpeg`. Tests: `python3 -m unittest discover -s tests`.
 

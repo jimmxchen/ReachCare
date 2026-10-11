@@ -317,7 +317,18 @@ form.addEventListener('submit', async e => {
   e.preventDefault(); show('');
   if (!form.hospital_name.value.trim()) { form.hospital_name.focus(); return show('Enter your hospital name.'); }
   const btn = $('#run'), lab = $('#run-label'); btn.disabled = true; lab.textContent = 'Locating hospital and simulating…';
-  try { renderResults(await api('/api/siting', payload())); }
+  try {
+    const plan = await api('/api/siting', payload());
+    try {
+      const previous = JSON.parse(localStorage.getItem('reachcare-demo-plans') || '[]');
+      const saved = Array.isArray(previous) ? previous : [];
+      localStorage.setItem('reachcare-demo-plans', JSON.stringify([
+        {hospital: plan.hospital, service: plan.params.service, clinics: plan.clinics},
+        ...saved.filter(p => p.hospital?.name !== plan.hospital.name || p.service !== plan.params.service).slice(0, 4)
+      ]));
+    } catch { /* browser storage is optional; the plan still renders */ }
+    renderResults(plan);
+  }
   catch (err) { show(err.message); }
   finally { btn.disabled = false; lab.textContent = 'Find optimal clinic location'; }
 });

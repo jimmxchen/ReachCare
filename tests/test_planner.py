@@ -16,7 +16,7 @@ from planner.feeds import refresh, weather_blocks
 from planner.model import baselines, coverage_matrix, default_config, greedy_schedule, normalize, run_plan, trend_multipliers, validate_config
 from planner.store import Store
 from scripts.reproduce import reproduce
-from server import Application, _same_origin
+from server import Application, Handler, PreviewStore, _same_origin
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -30,6 +30,36 @@ class OriginTests(unittest.TestCase):
         with patch.dict("os.environ", {"VERCEL": ""}):
             self.assertTrue(_same_origin("http://127.0.0.1:8000", "127.0.0.1:8000"))
             self.assertFalse(_same_origin("https://127.0.0.1:8000", "127.0.0.1:8000"))
+
+    def test_hosted_browser_chat_runs_but_alert_outbox_is_blocked(self):
+        request = {"sender": "web-test", "text": "Hi", "preview": True, "profile": None, "plans": []}
+        body = json.dumps(request).encode()
+        handler = Handler.__new__(Handler)
+        handler.path = "/api/bot/message"
+        handler.headers = {"Content-Length": str(len(body)), "Origin": "https://reachcare.example", "Host": "reachcare.example"}
+        handler.rfile = io.BytesIO(body)
+        handler.authorized = lambda: True
+        responses = []
+        handler.json_response = lambda value, status=200: responses.append((status, value))
+        with patch.dict("os.environ", {"VERCEL": "1"}), patch("planner.bot.gemini.available", return_value=False):
+            handler.do_POST()
+            self.assertEqual(responses[-1][0], 200)
+            self.assertEqual(responses[-1][1]["profile"]["stage"], "name")
+            handler.path = "/api/bot/outbox"
+            handler.do_POST()
+            self.assertEqual(responses[-1][0], 503)
+
+    def test_hosted_signup_is_advertised_as_preview_only(self):
+        handler = Handler.__new__(Handler)
+        handler.path = "/api/clinic-options"
+        handler.app = type("DemoApp", (), {"state": {"counties": {}}})()
+        handler.authorized = lambda: True
+        responses = []
+        handler.json_response = lambda value, status=200: responses.append((status, value))
+        with patch.dict("os.environ", {"VERCEL": "1"}):
+            handler.do_GET()
+        self.assertEqual(responses[-1][0], 200)
+        self.assertFalse(responses[-1][1]["alerts"])
 
 
 def small_case():
@@ -305,6 +335,32 @@ class BotTests(unittest.TestCase):
             self.assertIn("Hi Maria", self.talk(store, "hey"))
             self.assertIn("unsubscribed", self.talk(store, "STOP"))
             self.assertTrue(store.get("imessage:+15550001")["stopped"])
+
+    def test_browser_preview_keeps_profile_without_promising_alerts(self):
+        from planner import bot
+        with patch("planner.bot.gemini.available", return_value=False):
+            store = PreviewStore(None)
+            first = bot.handle([], store, {"sender": "web-test", "text": "When is the next blood pressure clinic?"}, preview=True)
+            self.assertIn("proposed", first["reply"])
+            self.assertIn("Plan a clinic", first["reply"])
+            self.assertNotIn("I'll text you", first["reply"])
+            self.assertEqual(store.profile["stage"], "name")
+            next_request = PreviewStore(store.profile)
+            second = bot.handle([], next_request, {"sender": "web-test", "text": "Maria"}, preview=True)
+            self.assertIn("city or ZIP", second["reply"])
+            self.assertEqual(next_request.profile["name"], "Maria")
+            bot.handle([], next_request, {"sender": "web-test", "reset": True}, preview=True)
+            self.assertIsNone(next_request.profile)
+
+    def test_browser_preview_answers_from_proposed_plan(self):
+        from planner import bot
+        profile = {"name": "Maria", "place": "Raleigh, NC", "lat": 35.78, "lon": -78.64,
+                   "services": ["blood-pressure"], "language": "eng", "stage": "done", "stopped": False}
+        with patch("planner.bot.gemini.available", return_value=False):
+            result = bot.handle(self.PLANS, PreviewStore(profile),
+                                {"sender": "web-test", "text": "When is the next blood pressure clinic?"}, preview=True)
+        self.assertIn("Near Library", result["reply"])
+        self.assertIn("proposed plan, not a confirmed event", result["reply"])
 
     def test_notifications_only_reach_matching_opted_in_people(self):
         from planner import bot

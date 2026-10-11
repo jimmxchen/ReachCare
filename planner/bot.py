@@ -90,13 +90,15 @@ def facts_for(matches, service, where, asked_place):
             "asked_about_place": asked_place, "location_understood": bool(where)}
 
 
-def english_reply(f):
+def english_reply(f, proposed=False):
     if not f["found"]:
+        if proposed:
+            return f"I don't see an upcoming proposed {f['service']} clinic in this browser demo. Create a plan in Plan a clinic first."
         return f"I don't see an upcoming free {f['service']} clinic scheduled yet. Please check back soon."
     if f.get("far"):
-        text = f"I don't see a free {f['service']} clinic within 60 miles. The closest one is on"
+        text = f"I don't see a {'proposed ' if proposed else 'free '}{f['service']} clinic within 60 miles. The closest one is on"
     else:
-        text = f"The next free {f['service']} clinic is on"
+        text = f"The next {'proposed ' if proposed else 'free '}{f['service']} clinic is on"
     text += f" {f['date']} at {f['name']}, {f['address']}"
     text += f" ({f['miles_away']} miles away)." if f.get("miles_away") is not None else "."
     if f.get("hosted_by"):
@@ -105,6 +107,8 @@ def english_reply(f):
         text += " Also: " + "; ".join(f"{a['name']} on {a['date']}" for a in f["also"]) + "."
     if not f["location_understood"]:
         text += " Tell me your city or ZIP code and I'll find the closest one."
+    if proposed:
+        text += " This is a proposed plan, not a confirmed event."
     return text
 
 
@@ -198,16 +202,16 @@ def _service_text(services):
     return ", ".join(names[:-1]) + (" and " if len(names) > 1 else "") + names[-1] if names else "free clinic"
 
 
-def _clinic_answer(plans, profile, parsed, text):
+def _clinic_answer(plans, profile, parsed, text, proposed=False):
     service = parsed["services"][0] if len(parsed["services"]) == 1 else (profile.get("services") or [None])[0] if len(profile.get("services") or []) == 1 else None
     where = geocode.locate_place(parsed["place"]) if parsed["place"] else None
     if not where and profile.get("lat") is not None:
         where = {"lat": profile["lat"], "lon": profile["lon"], "label": profile.get("place")}
     matches = upcoming(plans, service, where)
-    return english_reply(facts_for(matches, service, where, parsed["place"])), matches[0] if matches else None
+    return english_reply(facts_for(matches, service, where, parsed["place"]), proposed), matches[0] if matches else None
 
 
-def converse(plans, store, sender, text, language_hint=None):
+def converse(plans, store, sender, text, language_hint=None, preview=False):
     """Return (english_reply, language, match). Mutates the sender's profile."""
     profile = store.get(sender)
     first_contact = profile is None
@@ -229,9 +233,13 @@ def converse(plans, store, sender, text, language_hint=None):
 
     if intent == "stop":
         profile["stopped"] = True
+        if preview:
+            return finish("This browser demo doesn't send text alerts. Reply START to continue the conversation.")
         return finish("You're unsubscribed and won't get text updates. Reply START anytime to turn them back on.")
     if intent == "start" and profile["stopped"]:
         profile["stopped"] = False
+        if preview:
+            return finish("Welcome back! Ask me about a proposed clinic plan.")
         return finish("Welcome back! I'll text you when a free clinic is scheduled near you.")
     if intent == "update":
         profile.update(stage="name", stopped=False)
@@ -243,18 +251,20 @@ def converse(plans, store, sender, text, language_hint=None):
 
     # Clinic question: answer it, then continue onboarding if unfinished.
     if intent == "ask_clinic" and not first_contact:
-        reply, match = _clinic_answer(plans, profile, parsed, text)
+        reply, match = _clinic_answer(plans, profile, parsed, text, preview)
         if profile["stage"] != "done":
-            reply += "\n\nTo text you updates, I need a bit more info. " + PROMPTS[profile["stage"]]
+            reply += ("\n\nTo tailor the demo, " if preview else "\n\nTo text you updates, I need a bit more info. ") + PROMPTS[profile["stage"]]
         return finish(reply)
 
     if first_contact:
-        intro = ("Hi! I'm ReachCare. I help you find free community health clinics in North Carolina, "
+        intro = ("Hi! I'm ReachCare. I help you explore proposed free clinic plans in North Carolina. "
+                 "This browser demo does not send text alerts." if preview else
+                 "Hi! I'm ReachCare. I help you find free community health clinics in North Carolina, "
                  "and I can text you when one is scheduled near you.")
         if intent == "ask_clinic":
-            reply, match = _clinic_answer(plans, profile, parsed, text)
-            return finish(f"{reply}\n\n{intro} Reply STOP anytime to opt out.\n\n{PROMPTS['name']}")
-        return finish(f"{intro} Reply STOP anytime to opt out.\n\nFirst, {PROMPTS['name'][0].lower()}{PROMPTS['name'][1:]}")
+            reply, match = _clinic_answer(plans, profile, parsed, text, preview)
+            return finish(f"{reply}\n\n{intro}{'' if preview else ' Reply STOP anytime to opt out.'}\n\n{PROMPTS['name']}")
+        return finish(f"{intro}{'' if preview else ' Reply STOP anytime to opt out.'}\n\nFirst, {PROMPTS['name'][0].lower()}{PROMPTS['name'][1:]}")
 
     stage = profile["stage"]
     if stage == "name":
@@ -273,24 +283,28 @@ def converse(plans, store, sender, text, language_hint=None):
             profile.update(services=parsed["services"], stage="done", stopped=False)
             matches = upcoming(plans, None, {"lat": profile["lat"], "lon": profile["lon"]})
             matches = [m for m in matches if m["service"] in profile["services"] and m["miles"] <= 60]
-            reply = (f"You're all set, {profile['name']}! I'll text you when a free {_service_text(profile['services'])} clinic "
+            reply = (f"You're all set, {profile['name']}! I can help you explore proposed {_service_text(profile['services'])} "
+                     f"clinics near {profile['place']}." if preview else
+                     f"You're all set, {profile['name']}! I'll text you when a free {_service_text(profile['services'])} clinic "
                      f"is scheduled near {profile['place']}. Reply STOP anytime to unsubscribe.")
             if matches:
                 match = matches[0]
-                reply += f"\n\nOne is already coming up: {_pretty(match['date'])} at {match['name']}, {match.get('city') or match['county']}."
+                reply += ("\n\nOne proposal is " if preview else "\n\nOne is already coming up: ") + f"{_pretty(match['date'])} at {match['name']}, {match.get('city') or match['county']}."
             else:
-                reply += "\n\nNothing is scheduled near you yet, but I'll let you know."
+                reply += "\n\nNo matching proposal is available in this demo yet." if preview else "\n\nNothing is scheduled near you yet, but I'll let you know."
             return finish(reply)
         return finish("Sorry, I didn't catch that. " + PROMPTS["services"])
 
     # Registered and chatting.
     if intent == "help":
+        if preview:
+            return finish("Ask me about a proposed clinic plan, or send a voice note. Reply UPDATE to change your info.")
         return finish("Ask me \"when is the next free blood pressure clinic?\" or send a voice note in any language. "
                       "Reply UPDATE to change your info, or STOP to unsubscribe.")
     if intent == "greeting":
-        return finish(f"Hi {profile['name']}! Ask me about the next free clinic near {profile['place']}, "
+        return finish(f"Hi {profile['name']}! Ask me about the next {'proposed ' if preview else 'free '}clinic near {profile['place']}, "
                       "or reply UPDATE to change your info.")
-    reply, match = _clinic_answer(plans, profile, parsed, text)
+    reply, match = _clinic_answer(plans, profile, parsed, text, preview)
     if intent == "other" and match is not None and not any(w in text.lower() for w in ("clinic", "screen", "blood", "diabet", "asthma", "copd")):
         return finish("I can help you find free clinics. Try \"when is the next clinic near me?\" or reply HELP.")
     return finish(reply)
@@ -308,7 +322,7 @@ def translate(reply, language):
         return reply
 
 
-def handle(plans, store, payload):
+def handle(plans, store, payload, preview=False):
     """payload: {"sender", "text"} or {"sender", "audio_b64", "mime"}. Voice in gets a voice memo back."""
     sender = str(payload.get("sender") or "anonymous")[:80]
     if payload.get("reset") and sender.startswith("web-"):
@@ -322,7 +336,7 @@ def handle(plans, store, payload):
         heard = elevenlabs.transcribe(audio, payload.get("mime") or "audio/mp4")
         if not heard["text"]:
             raise ValueError("I couldn't hear anything in that voice note.")
-        english, language, match = converse(plans, store, sender, heard["text"], heard["language"])
+        english, language, match = converse(plans, store, sender, heard["text"], heard["language"], preview)
         reply = translate(english, language)
         result = {"mode": "voice", "reply": reply, "language": language, "transcript": heard["text"],
                   "match": match, "sender": sender}
@@ -336,7 +350,7 @@ def handle(plans, store, payload):
     text = str(payload.get("text", "")).strip()
     if not text:
         raise ValueError("Send a text message or a voice note.")
-    english, language, match = converse(plans, store, sender, text)
+    english, language, match = converse(plans, store, sender, text, preview=preview)
     return {"mode": "text", "reply": translate(english, language), "language": language, "transcript": text,
             "match": match, "sender": sender}
 
