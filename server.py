@@ -289,7 +289,7 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/api/clinic-options":
                 self.json_response({"counties": self.app.state["counties"], "services": {k: v["name"] for k, v in SERVICES.items()},
                                     "radii": list(siting.RADII), "gemini": gemini.available(), "maps": geocode.available(),
-                                    "alerts": not bool(os.environ.get("VERCEL")),
+                                    "alerts": not bool(os.environ.get("VERCEL")), "hosted_preview": bool(os.environ.get("VERCEL")),
                                     })
             elif path == "/api/places/suggest":
                 q = parse_qs(url.query)

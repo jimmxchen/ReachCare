@@ -60,6 +60,11 @@ class OriginTests(unittest.TestCase):
             handler.do_GET()
         self.assertEqual(responses[-1][0], 200)
         self.assertFalse(responses[-1][1]["alerts"])
+        self.assertTrue(responses[-1][1]["hosted_preview"])
+        with patch.dict("os.environ", {"VERCEL": ""}):
+            handler.do_GET()
+        self.assertTrue(responses[-1][1]["alerts"])
+        self.assertFalse(responses[-1][1]["hosted_preview"])
 
 
 def small_case():
@@ -361,6 +366,18 @@ class BotTests(unittest.TestCase):
                                 {"sender": "web-test", "text": "When is the next blood pressure clinic?"}, preview=True)
         self.assertIn("Near Library", result["reply"])
         self.assertIn("proposed plan, not a confirmed event", result["reply"])
+
+    def test_browser_preview_uses_gemini_for_grounded_clinic_answer(self):
+        from planner import bot
+        profile = {"name": "Maria", "place": "Raleigh, NC", "lat": 35.78, "lon": -78.64,
+                   "services": ["blood-pressure"], "language": "eng", "stage": "done", "stopped": False}
+        with patch("planner.bot.gemini.available", return_value=True), \
+                patch("planner.bot.gemini.generate", return_value="Near Library has a proposed clinic on November 2.") as generate:
+            result = bot.handle(self.PLANS, PreviewStore(profile),
+                                {"sender": "web-test", "text": "When is the next blood pressure clinic?"}, preview=True)
+        self.assertIn("Near Library has a proposed clinic", result["reply"])
+        self.assertIn("not a confirmed event", result["reply"])
+        self.assertIn("Near Library", generate.call_args.args[0])
 
     def test_notifications_only_reach_matching_opted_in_people(self):
         from planner import bot

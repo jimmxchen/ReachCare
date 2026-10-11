@@ -32,7 +32,7 @@ Reach counts who lives near a site, not expected turnout.
 
 | Service | Model | Used for |
 | --- | --- | --- |
-| **Google Gemini API** | `gemini-3.5-flash` (falls back to `gemini-3.1-flash-lite`, then `gemini-flash-latest`) | Plan explanations, planner chat, text-message intent extraction (JSON mode), reply translation |
+| **Google Gemini API** | `gemini-3.5-flash` (falls back to `gemini-3.1-flash-lite`, then `gemini-flash-latest`) | Plan explanations, planner chat, clinic question interpretation and grounded replies, translation |
 | **ElevenLabs** | Scribe (`scribe_v2`) speech-to-text, `eleven_multilingual_v2` text-to-speech | Transcribing voice notes and detecting language; spoken replies |
 | **Claude Code** (Anthropic) | n/a | AI coding assistant used during development |
 
@@ -65,7 +65,7 @@ Data: U.S. Census ACS 2024, CDC PLACES 2025, IMLS library outlets FY2024, NC DHH
 | Frontend | Plain HTML, CSS and JavaScript, with a custom SVG map (no framework or build step) |
 | iMessage bridge | Node.js 20+ and `spectrum-ts` |
 | Storage | JSON files and SQLite in the git-ignored `.runtime/` folder |
-| Tests | Python `unittest` (38 tests) |
+| Tests | Python `unittest` (39 tests) |
 
 ## Run it
 
@@ -79,7 +79,7 @@ cp .env.example .env          # add your keys
 
 Web app only: `python3 server.py`. Pages: `/` plan, `/#/docs` how it works, `/bot.html` bot tester, `/join.html` resident sign-up.
 
-On Vercel, the browser bot uses proposed plans created in the same browser and keeps its conversation in that browser tab. The Get alerts page is an interactive signup preview: it does not collect a phone number, save a subscriber, or send a message. The local bridge still handles real iMessages. Voice notes in the browser require `ELEVENLABS_API_KEY` in the Vercel environment.
+On localhost, the browser bot uses saved plans and the persistent local conversation store; `./start.sh` also runs the Photon bridge for real iMessages. On Vercel, the browser bot uses proposed plans created in the same browser and keeps its conversation in that browser tab. With `GEMINI_API_KEY` set, Gemini interprets clinic questions and writes answers grounded in the matching plan; otherwise basic lookup replies remain available. The hosted Get alerts page is an interactive signup preview: it does not collect a phone number, save a subscriber, or send a message. Voice notes in the browser require `ELEVENLABS_API_KEY` in the Vercel environment.
 
 Adding Photon credentials to Vercel alone does not enable live alerts. The current bridge runs continuously and keeps subscriptions and its outbox in a local JSON file. A hosted live version needs persistent subscriber storage, a Photon webhook for inbound messages and STOP requests, and outbound delivery from the hosted service. Until those pieces are configured, `/api/signup` remains disabled on Vercel.
 

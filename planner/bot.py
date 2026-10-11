@@ -208,7 +208,23 @@ def _clinic_answer(plans, profile, parsed, text, proposed=False):
     if not where and profile.get("lat") is not None:
         where = {"lat": profile["lat"], "lon": profile["lon"], "label": profile.get("place")}
     matches = upcoming(plans, service, where)
-    return english_reply(facts_for(matches, service, where, parsed["place"]), proposed), matches[0] if matches else None
+    facts = facts_for(matches, service, where, parsed["place"])
+    reply = english_reply(facts, proposed)
+    if facts["found"] and gemini.available():
+        prompt = (PERSONA + " Answer the person's clinic question in 1-3 friendly sentences. "
+                  "Use only the supplied clinic facts. Do not invent a date, venue, address, distance, or availability. "
+                  "If no clinic was found, clearly say so. "
+                  + ("Every clinic here is a proposal, not a confirmed event. Say that clearly. " if proposed else "")
+                  + "Do not give medical advice. Reply in English; translation happens separately.\n\n"
+                  + f"Question: {text[:500]}\nFacts: {json.dumps(facts)}\n"
+                  + f"Factual fallback answer: {reply}")
+        try:
+            generated = gemini.generate(prompt).strip()
+            if generated:
+                reply = generated + (" This is a proposed plan, not a confirmed event." if proposed else "")
+        except RuntimeError:
+            pass
+    return reply, matches[0] if matches else None
 
 
 def converse(plans, store, sender, text, language_hint=None, preview=False):

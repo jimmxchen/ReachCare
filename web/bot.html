@@ -40,7 +40,9 @@
   <div class="stage">
     <div class="bot-intro">
       <h1>Find the next free clinic</h1>
-      <p>Ask by text or voice, in any language. A text gets a text reply, and a voice note gets a voice reply in the same language. In this demo, clinic answers use proposed plans you create in Plan a clinic; the events are not confirmed.</p>
+      <p>Ask by text or voice, in any language. A text gets a text reply, and a voice note gets a voice reply in the same language.</p>
+      <p class="note" id="mode-status" role="status"></p>
+      <p class="note" id="ai-status" role="status"></p>
     </div>
     <div id="thread" class="thread" aria-live="polite"></div>
     <div class="examples" id="examples">
@@ -63,6 +65,20 @@
     localStorage.setItem('reach-sender', sender);
     let profile = null;
     try { profile = JSON.parse(sessionStorage.getItem('reachcare-demo-profile') || 'null'); } catch {}
+    let hostedPreview = false;
+    let modeError = null;
+    const modeReady = fetch('/api/clinic-options').then(r => {
+      if (!r.ok) throw new Error('Could not check chat mode. Refresh the page and try again.');
+      return r.json();
+    }).then(options => {
+      hostedPreview = !!options.hosted_preview;
+      document.getElementById('mode-status').textContent = hostedPreview
+        ? 'Hosted preview: answers use proposed plans from this browser. Events are not confirmed, and no iMessages are sent.'
+        : 'Local mode: answers use saved plans. Run ./start.sh to also receive and send iMessages through Photon.';
+      document.getElementById('ai-status').textContent = options.gemini
+        ? 'Gemini helps interpret questions and explain matching clinic plans.'
+        : 'Gemini is not configured; clinic questions use a basic lookup. Set GEMINI_API_KEY to enable AI answers.';
+    }).catch(err => { modeError = err; document.getElementById('mode-status').textContent = err.message; });
 
     function bubble(who, body, audioUrl) {
       const d = document.createElement('div'); d.className = 'bubble ' + (who === 'me' ? 'me' : 'bot');
@@ -81,15 +97,21 @@
     function setBusy(v) { busy = v; go.disabled = v; mic.disabled = v && mic.textContent === 'Record voice'; text.disabled = v; }
 
     async function ask(body) {
-      let plans = [];
-      try {
-        const saved = JSON.parse(localStorage.getItem('reachcare-demo-plans') || '[]');
-        if (Array.isArray(saved)) plans = saved;
-      } catch {}
-      const r = await fetch('/api/bot/message', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...body, preview: true, profile, plans})});
+      await modeReady;
+      if (modeError) throw modeError;
+      let request = body;
+      if (hostedPreview) {
+        let plans = [];
+        try {
+          const saved = JSON.parse(localStorage.getItem('reachcare-demo-plans') || '[]');
+          if (Array.isArray(saved)) plans = saved;
+        } catch {}
+        request = {...body, preview: true, profile, plans};
+      }
+      const r = await fetch('/api/bot/message', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(request)});
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
-      if ('profile' in data) {
+      if (hostedPreview && 'profile' in data) {
         profile = data.profile;
         try {
           if (profile) sessionStorage.setItem('reachcare-demo-profile', JSON.stringify(profile));
