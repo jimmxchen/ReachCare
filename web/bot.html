@@ -19,6 +19,7 @@
     .bubble.bot{align-self:flex-start;background:var(--soft);border:1px solid var(--line);border-bottom-left-radius:4px}
     .bubble small{display:block;margin-bottom:4px;font-size:12px;opacity:.7}
     .bubble audio{display:block;margin-top:10px;width:100%;max-width:320px}
+    .sample-heading{font-size:12px;color:var(--muted);text-align:center;padding:4px 0 2px}
     .typing{display:inline-flex;align-items:center;gap:10px;color:var(--muted);font-size:14px}
     .dots{display:inline-flex;gap:4px}
     .dots i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:bounce 1.1s infinite ease-in-out}
@@ -78,14 +79,25 @@
       document.getElementById('ai-status').textContent = options.gemini
         ? 'Gemini helps interpret questions and explain matching clinic plans.'
         : 'Gemini is not configured; clinic questions use a basic lookup. Set GEMINI_API_KEY to enable AI answers.';
+      if (hostedPreview) seedExampleConversation();
     }).catch(err => { modeError = err; document.getElementById('mode-status').textContent = err.message; });
 
-    function bubble(who, body, audioUrl) {
+    function bubble(who, body, audioUrl, label) {
       const d = document.createElement('div'); d.className = 'bubble ' + (who === 'me' ? 'me' : 'bot');
+      if (label) { const caption = document.createElement('small'); caption.textContent = label; d.append(caption); }
       if (body) d.append(document.createTextNode(body));
-      if (audioUrl) { const a = document.createElement('audio'); a.controls = true; a.src = audioUrl; d.append(a); }
+      if (audioUrl) { const a = document.createElement('audio'); a.controls = true; a.preload = 'none'; a.src = audioUrl; d.append(a); }
       thread.append(d); thread.scrollTop = thread.scrollHeight;
       return d;
+    }
+    function seedExampleConversation() {
+      const heading = document.createElement('div');
+      heading.className = 'sample-heading'; heading.textContent = 'Example conversation · preloaded';
+      thread.append(heading);
+      bubble('me', 'Hello, how are you doing?');
+      bubble('bot', "Hi! I'm doing well, thanks for asking. I can help you explore proposed free clinic plans in North Carolina. What would you like to know?");
+      bubble('me', '¿Hay clínicas gratuitas cerca de Raleigh?', '/demo-question-es.mp3', 'Voice note · Spanish transcript');
+      bubble('bot', 'Puedo ayudarte a explorar planes de clínicas gratuitas cerca de Raleigh. Dime qué servicio necesitas. Las fechas y los lugares propuestos todavía no están confirmados.', '/demo-answer-es.mp3', 'Voice reply · Spanish transcript');
     }
     function typing(label) {
       const d = document.createElement('div'); d.className = 'bubble bot';

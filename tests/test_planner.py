@@ -44,7 +44,7 @@ class OriginTests(unittest.TestCase):
         with patch.dict("os.environ", {"VERCEL": "1"}), patch("planner.bot.gemini.available", return_value=False):
             handler.do_POST()
             self.assertEqual(responses[-1][0], 200)
-            self.assertEqual(responses[-1][1]["profile"]["stage"], "name")
+            self.assertEqual(responses[-1][1]["profile"]["stage"], "chat")
             handler.path = "/api/bot/outbox"
             handler.do_POST()
             self.assertEqual(responses[-1][0], 503)
@@ -349,13 +349,24 @@ class BotTests(unittest.TestCase):
             self.assertIn("proposed", first["reply"])
             self.assertIn("Plan a clinic", first["reply"])
             self.assertNotIn("I'll text you", first["reply"])
-            self.assertEqual(store.profile["stage"], "name")
+            self.assertNotIn("what's your name", first["reply"].lower())
+            self.assertEqual(store.profile["stage"], "chat")
             next_request = PreviewStore(store.profile)
-            second = bot.handle([], next_request, {"sender": "web-test", "text": "Maria"}, preview=True)
-            self.assertIn("city or ZIP", second["reply"])
-            self.assertEqual(next_request.profile["name"], "Maria")
+            second = bot.handle([], next_request, {"sender": "web-test", "text": "Hello, how are you doing?"}, preview=True)
+            self.assertIn("doing well", second["reply"])
+            self.assertNotIn("what's your name", second["reply"].lower())
             bot.handle([], next_request, {"sender": "web-test", "reset": True}, preview=True)
             self.assertIsNone(next_request.profile)
+
+    def test_browser_first_contact_greeting_needs_no_gemini_or_signup(self):
+        from planner import bot
+        with patch("planner.bot.gemini.available", return_value=True), \
+                patch("planner.bot.gemini.generate") as generate:
+            result = bot.handle([], PreviewStore(None),
+                                {"sender": "web-test", "text": "Hello, how are you doing?"}, preview=True)
+        self.assertIn("doing well, thanks for asking", result["reply"])
+        generate.assert_not_called()
+        self.assertNotIn("phone number", result["reply"].lower())
 
     def test_browser_preview_answers_from_proposed_plan(self):
         from planner import bot

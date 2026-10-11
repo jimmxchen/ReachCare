@@ -152,7 +152,8 @@ def _parse(text, stage):
         rule["intent"] = "update"
     elif lowered in ("help", "?", "menu"):
         rule["intent"] = "help"
-    elif lowered in GREETINGS or (len(words) <= 2 and words and words[0] in GREETINGS):
+    elif lowered in GREETINGS or (words and words[0] in GREETINGS and
+                                  (len(words) <= 2 or "how are you" in lowered or "how's it going" in lowered)):
         rule["intent"] = "greeting"
     elif any(w in lowered for w in ("when", "where", "next", "clinic", "cuando", "cuándo", "dónde", "donde", "clínica", "clinica")):
         rule["intent"] = "ask_clinic"
@@ -171,6 +172,8 @@ def _parse(text, stage):
         rule["intent"] = "provide_info"
     if stage == "services" and rule["services"]:
         rule["intent"] = "provide_info"
+    if stage is None and rule["intent"] == "greeting":
+        return rule
     if not gemini.available():
         return rule
     prompt = (PERSONA + " Classify the person's latest message. Return JSON with keys: "
@@ -227,14 +230,36 @@ def _clinic_answer(plans, profile, parsed, text, proposed=False):
     return reply, matches[0] if matches else None
 
 
+def _browser_conversation(text, proposed):
+    """Answer conversational browser messages without enrolling someone in alerts."""
+    fallback = ("Hi! I'm doing well, thanks for asking. " if "how are you" in text.lower() else "Hi! ")
+    fallback += ("I can help you explore proposed free clinic plans in North Carolina. What would you like to know?"
+                 if proposed else "I can help you find free clinics in North Carolina. What would you like to know?")
+    if not gemini.available():
+        return fallback
+    prompt = (PERSONA + " You are chatting in a browser. Reply naturally to the person's message in 1-2 sentences. "
+              "If they ask how you are, answer politely. You can help with North Carolina free clinic plans. "
+              "No clinic facts are provided here, so do not invent locations, dates, or availability. "
+              "Do not ask for a name, phone number, or subscription. Reply in English; translation happens separately. "
+              + ("The hosted browser only shows proposed plans, not confirmed events. " if proposed else "")
+              + f"\n\nPerson: {text[:500]}\nReachCare:")
+    try:
+        return gemini.generate(prompt).strip() or fallback
+    except RuntimeError:
+        return fallback
+
+
 def converse(plans, store, sender, text, language_hint=None, preview=False):
     """Return (english_reply, language, match). Mutates the sender's profile."""
+    browser = sender.startswith("web-")
     profile = store.get(sender)
     first_contact = profile is None
     if first_contact:
         profile = {"name": None, "place": None, "lat": None, "lon": None, "services": [], "language": "eng",
-                   "stage": "name", "stopped": False, "created_at": datetime.now(timezone.utc).isoformat()}
-    stage = profile["stage"] if profile["stage"] != "done" else None
+                   "stage": "chat" if browser else "name", "stopped": False, "created_at": datetime.now(timezone.utc).isoformat()}
+    if browser:
+        profile["stage"] = "chat"  # Existing browser sessions may have the old onboarding stage.
+    stage = None if browser or profile["stage"] == "done" else profile["stage"]
     parsed = _parse(text, stage)
     language = language_hint or profile.get("language") or "eng"
     if not language_hint and parsed.get("language") and len(text.split()) >= 4:
@@ -246,6 +271,18 @@ def converse(plans, store, sender, text, language_hint=None, preview=False):
     def finish(reply):
         store.put(sender, profile)
         return reply, language, match
+
+    if browser:
+        if intent == "medical":
+            return finish("I can't give medical advice. Please contact a clinician about symptoms or medicines. If it's an emergency, call 911.")
+        if intent == "ask_clinic":
+            reply, match = _clinic_answer(plans, profile, parsed, text, preview)
+            return finish(reply)
+        if intent == "greeting":
+            return finish(("Hi! I'm doing well, thanks for asking. " if "how are you" in text.lower() else "Hi! ") +
+                          ("I can help you explore proposed free clinic plans in North Carolina. What would you like to know?"
+                           if preview else "I can help you find free clinics in North Carolina. What would you like to know?"))
+        return finish(_browser_conversation(text, preview))
 
     if intent == "stop":
         profile["stopped"] = True
