@@ -238,6 +238,12 @@ function svgPoint(e) {
   $('#zoom-reset').addEventListener('click', () => { view = {...serviceView}; applyView(); });
 })();
 $('#close-results').addEventListener('click', () => $('#results').close());
+$('#results .brand').addEventListener('click', event => {
+  event.preventDefault();
+  $('#results').close();
+  if (location.hash === '#/plan') route();
+  else location.hash = '#/plan';
+});
 
 // ---------- Hospital autocomplete ----------
 const session = (crypto.randomUUID?.() || String(Date.now()) + Math.random().toString(16).slice(2)).replace(/-/g, '');

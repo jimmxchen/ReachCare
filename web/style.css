@@ -161,7 +161,14 @@ dialog#results{border:0;padding:0;width:100vw;max-width:100vw;height:100vh;max-h
 .suggest li[aria-selected="true"],.suggest li:hover{background:var(--soft)}
 .suggest li.note{cursor:default;color:var(--muted);font-size:13px}
 .place-ok{color:var(--accent)}
-.result-title{display:flex;align-items:center;gap:16px}.result-title img{height:44px;width:auto}
+.result-title{display:flex;align-items:center;gap:24px;min-width:0}
+.result-title .brand{flex:none}
+.result-meta{min-width:0;border-left:1px solid var(--line);padding-left:24px}
+@media (max-width:700px){
+  .results-head{align-items:flex-start;flex-wrap:wrap}
+  .result-title{flex-wrap:wrap;gap:12px}
+  .result-meta{flex-basis:100%;border-left:0;padding-left:0}
+}
 .check.opt b{display:block;font-weight:600;color:var(--ink)}
 .check.opt small{display:block;margin-top:2px;font-size:13px;line-height:1.45;color:var(--muted)}
 .announce{border:1px solid var(--line);border-radius:4px;padding:16px;display:grid;gap:10px}
