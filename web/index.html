@@ -24,21 +24,22 @@
       <div class="intake">
         <div class="intro">
           <h1>Where should the next free clinic go?</h1>
-          <p class="lead">Set your hospital, service and staffing, then run a simulation. We score every census tract in your driving radius by need and open a map of the host sites that reach the most people.</p>
+          <p class="lead">Choose a state, set your hospital, service and staffing, then run a simulation. We score census tracts in your driving radius and map library sites that could reach more people.</p>
           <ul class="facts">
-            <li><b>2,637</b> census tracts scored</li>
-            <li><b>397</b> candidate host sites</li>
+            <li><b id="tract-count">—</b> census tracts in selected state</li>
+            <li><b id="library-count">—</b> public library locations</li>
             <li><b>7</b> priority mixes tested per plan</li>
           </ul>
         </div>
 
         <form id="plan-form" novalidate>
           <div id="error" class="notice error hidden" role="alert"></div>
+          <fieldset class="group"><legend>Planning area</legend><label>State or district<select id="state" name="state" required><option value="">Choose a state or district</option></select></label></fieldset>
           <fieldset class="group">
             <legend>Hospital</legend>
             <div class="combo">
               <label for="hospital-name">Hospital name</label>
-              <input id="hospital-name" name="hospital_name" type="text" maxlength="120" placeholder="Start typing, e.g. Mission Hospital" required autocomplete="off" role="combobox" aria-expanded="false" aria-controls="suggest-list" aria-autocomplete="list">
+              <input id="hospital-name" name="hospital_name" type="text" maxlength="120" placeholder="Start typing a hospital name" required autocomplete="off" role="combobox" aria-expanded="false" aria-controls="suggest-list" aria-autocomplete="list">
               <ul id="suggest-list" role="listbox" class="suggest hidden"></ul>
             </div>
             <p class="hint tight" id="place-status">Choose a suggestion so we use the exact address.</p>
@@ -86,7 +87,7 @@
             <legend>Existing care</legend>
             <label class="check opt"><input type="checkbox" name="use_existing_care" checked>
               <span><b>Skip areas that already have a nearby clinic</b>
-              <small>An area counts as covered if a clinic from the NC safety-net directory (27 health departments and community clinics) is within your patient travel target. Covered areas show gray on the map and don't count toward a new clinic's reach. Uncheck to treat every area as unserved.</small></span></label>
+              <small>An area counts as covered if a HRSA health center is within your patient travel target, based on coordinate distance estimates. Covered areas show gray on the map and don't count toward a new clinic's reach. Uncheck to treat every area as unserved.</small></span></label>
           </fieldset>
 
           <div class="actions"><button type="submit" class="button primary" id="run"><span id="run-label">Find optimal clinic location</span></button></div>

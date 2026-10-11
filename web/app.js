@@ -3,15 +3,46 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const fmt = v => new Intl.NumberFormat('en-US').format(Math.round(v || 0));
 const NS = 'http://www.w3.org/2000/svg';
 const MILES_PER_MINUTE = 0.58; // keep in sync with planner/siting.py
-const LAT0 = 35.2, KX = Math.cos(LAT0 * Math.PI / 180), SCALE = 118; // px per degree of latitude
-const LON_MIN = -84.4, LAT_MAX = 36.62;
+let LAT0 = 39, KX = Math.cos(LAT0 * Math.PI / 180), SCALE = 100, LON_MIN = -100, LAT_MAX = 50;
 const W = 1000, H = 380;
-const project = (lon, lat) => [(lon - LON_MIN) * KX * SCALE, (LAT_MAX - lat) * SCALE];
+let MAP_X = 0, MAP_Y = 0;
+const project = (lon, lat) => [MAP_X + (lon - LON_MIN) * KX * SCALE, MAP_Y + (LAT_MAX - lat) * SCALE];
 const unproject = (x, y) => [LON_MIN + x / (KX * SCALE), LAT_MAX - y / SCALE];
 const milesToPx = miles => miles / 69.09 * SCALE;
 
 const form = $('#plan-form');
 let place = null, options, tracts = [], tractPaths = new Map(), landPath = '', lastPlan = null;
+const stateSelect = $('#state');
+
+async function loadGeography(code) {
+  tractPaths = new Map();
+  const geo = await api(`/api/catalog/geography?state=${encodeURIComponent(code)}`);
+  let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+  for (const f of geo.features) {
+    const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
+    for (const poly of polys) for (const ring of poly) for (const [lon, lat] of ring) {
+      minLon = Math.min(minLon, lon); maxLon = Math.max(maxLon, lon);
+      minLat = Math.min(minLat, lat); maxLat = Math.max(maxLat, lat);
+    }
+  }
+  if (!Number.isFinite(minLon)) throw new Error('No tract boundaries are available for this state.');
+  LON_MIN = minLon; LAT_MAX = maxLat; LAT0 = (minLat + maxLat) / 2;
+  KX = Math.cos(LAT0 * Math.PI / 180);
+  SCALE = Math.min((W - 36) / ((maxLon - LON_MIN) * KX), (H - 36) / (LAT_MAX - minLat));
+  MAP_X = 18 + (W - 36 - (maxLon - minLon) * KX * SCALE) / 2;
+  MAP_Y = 18 + (H - 36 - (maxLat - minLat) * SCALE) / 2;
+  const parts = [];
+  for (const f of geo.features) {
+    const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
+    const d = polys.map(p => p.map(ringPath).join('')).join('');
+    tractPaths.set(f.properties.id, d); parts.push(d);
+  }
+  landPath = parts.join('');
+  drawBase($('#result-map'), false);
+  const selected = options.states.find(s => s.code === code);
+  $('#tract-count').textContent = fmt(selected?.tracts);
+  $('#library-count').textContent = fmt(selected?.libraries);
+}
 
 function show(msg) { const e = $('#error'); e.textContent = msg; e.classList.toggle('hidden', !msg); if (msg) e.scrollIntoView({block: 'nearest'}); }
 async function api(path, body) {
@@ -273,6 +304,7 @@ const session = (crypto.randomUUID?.() || String(Date.now()) + Math.random().toS
     input.value = s.name; status.textContent = 'Locating…';
     try {
       const d = await api(`/api/places/details?id=${encodeURIComponent(s.id)}&session=${session}`);
+      if (d.state && d.state !== stateSelect.value) throw new Error(`Choose a location in ${stateSelect.selectedOptions[0].text}.`);
       input.value = s.name;
       place = {text: s.name, lat: d.lat, lon: d.lon, address: d.address};
       status.textContent = d.address; status.classList.add('place-ok');
@@ -287,7 +319,7 @@ const session = (crypto.randomUUID?.() || String(Date.now()) + Math.random().toS
     timer = setTimeout(async () => {
       const mine = ++seq;
       try {
-        const r = await api(`/api/places/suggest?q=${encodeURIComponent(q)}&session=${session}`);
+        const r = await api(`/api/places/suggest?q=${encodeURIComponent(q)}&session=${session}&state=${encodeURIComponent(stateSelect.value)}`);
         if (mine !== seq) return;
         items = r.suggestions; render();
       } catch (err) { if (mine === seq) { items = []; close(); status.textContent = err.message; } }
@@ -308,7 +340,7 @@ function payload() {
   const f = new FormData(form), num = k => Number(f.get(k));
   const name = f.get('hospital_name').trim();
   const p = place && place.text === name ? {lat: place.lat, lon: place.lon, address: place.address} : {};
-  return {...p, hospital_name: name, service: f.get('service'), radius: num('radius'),
+  return {...p, state: f.get('state'), hospital_name: name, service: f.get('service'), radius: num('radius'),
     travel_target: num('travel_target'), date_start: f.get('date_start'), date_end: f.get('date_end'), days: num('days'),
     staff_count: num('staff_count'), clinical_hours: num('clinical_hours'), services_per_staff_hour: num('services_per_staff_hour'),
     use_existing_care: form.use_existing_care.checked};
@@ -349,7 +381,7 @@ function renderDocs() {
   <nav class="toc" aria-label="On this page"><a href="#/docs" data-jump="overview">Overview</a><a href="#/docs" data-jump="data">Data</a><a href="#/docs" data-jump="algorithm">Algorithm</a><a href="#/docs" data-jump="robust">Robustness</a><a href="#/docs" data-jump="limits">Limits</a><a href="#/docs" data-jump="gemini">Gemini</a></nav>
 
   <h2 id="overview">Overview</h2>
-  <p>A hospital gives us its name (located with Google Maps), a driving radius, a service, a patient travel target, dates and the number of clinic days. We score 2,637 North Carolina census tracts (10 of the state's 2,647 lack the data needed) on how much they need the service, then pick library host sites so the most need falls within the travel target of a free clinic, one site per clinic day.</p>
+  <p>Choose a state, then enter a hospital, driving radius, service, patient travel target, dates and clinic days. We score the available census tracts in that state and select public library sites that bring the most need within reach.</p>
   <pre>inputs → need score per tract → tracts in hospital radius → drop tracts with existing access
        → candidate host sites → greedy maximum-coverage pick → dates → robustness check</pre>
 
@@ -358,9 +390,9 @@ function renderDocs() {
   <tr><td>Adults 18+</td><td>Census ACS 2024 5-year, B01001</td><td>Population weight</td></tr>
   <tr><td>Households with no vehicle</td><td>Census ACS 2024 5-year, B08201</td><td>Transport barrier</td></tr>
   <tr><td>Diagnosed high blood pressure, diabetes, COPD, current asthma</td><td>CDC PLACES 2025 (modeled tract estimates)</td><td>Health need, one indicator per service</td></tr>
-  <tr><td>Host sites</td><td>IMLS public library outlets, FY2024 (397)</td><td>Candidate clinic locations</td></tr>
-  <tr><td>Existing care</td><td>NCDHHS safety-net directory + OSRM road times</td><td>Baseline access</td></tr></tbody></table>
-  <p class="callout">All census figures are read from files bundled with the app. They are never generated by an AI model.</p>
+  <tr><td>Host sites</td><td>IMLS public library outlets, FY2024 (selected state)</td><td>Candidate clinic locations</td></tr>
+  <tr><td>Existing care</td><td>HRSA health center sites</td><td>Baseline access, subject to local service verification</td></tr></tbody></table>
+  <p class="callout">The bundled public catalog covers all 50 states and DC. Census figures are read from source data and are never generated by an AI model.</p>
 
   <h2 id="algorithm">Algorithm</h2>
   <h3>1. Need score for each tract</h3>
@@ -370,10 +402,10 @@ priority      = w · health_index + (1 − w) · barrier_index
 need_weight   = adults_18_plus × priority</pre>
   <p>The indicator and its fixed <code>low</code>–<code>high</code> benchmark depend on the service: blood pressure 15–55%, diabetes 4–24%, COPD 2–15%, asthma 8.5–14.5%. <code>w</code> is 70% health and 30% transport barriers. Fixed benchmark ranges mean a score does not change when you add or remove candidate sites.</p>
   <h3>2. Service area</h3>
-  <p>Your hospital is located with Google Places (the suggestion you pick, or a text search of the name, with address geocoding as a fallback). Your driving radius is converted to distance at ${MILES_PER_MINUTE} miles per minute, which approximates rural North Carolina road speed and circuity. Only tracts whose center lies inside the circle count.</p>
+  <p>Your hospital is located with Google Places (the suggestion you pick, or a text search of the name, with address geocoding as a fallback). Your driving radius is converted to distance at ${MILES_PER_MINUTE} miles per minute, as a nationwide planning approximation; local road conditions can differ substantially. Only tracts whose center lies inside the circle count.</p>
   <table><thead><tr><th>Driving radius</th><th>Straight-line circle</th></tr></thead><tbody>${radii}</tbody></table>
   <h3>3. Existing access</h3>
-  <p>A tract is treated as already served when one of the 27 geocoded sites in the NCDHHS safety-net directory is within the patient travel target by cached road drive time (a precomputed OSRM matrix). These tracts add nothing to a new clinic's score. You can switch this off.</p>
+  <p>A tract is treated as already served when a listed HRSA health center in the selected state is within the patient travel target using coordinate-based distance estimates. These tracts add nothing to a new clinic's score. You can switch this off.</p>
   <h3>4. Candidate sites and reach</h3>
   <p>Candidates are the library outlets inside your circle. A site <em>reaches</em> a tract when the tract center is within the travel target of the site (same minutes-to-miles conversion) and the tract is inside your hospital circle. Reach outside the circle is not counted.</p>
   <h3>5. Greedy maximum coverage</h3>
@@ -393,8 +425,8 @@ repeat k times:
   <ul>
   <li><strong>It does not predict turnout.</strong> Reach counts adults who live near a site; staffing and outreach decide who attends. Daily capacity (staff × hours × services per staff hour) is shown separately and is usually far smaller than reach.</li>
   <li>Health indicators are modeled estimates of <em>diagnosed</em> prevalence and miss undiagnosed cases. The existing-care directory is not service-specific, so a nearby clinic may not offer the service you chose.</li>
-  <li>Hospital radius and clinic reach are straight-line approximations converted from minutes at a fixed speed, not real drive times from your address. Existing-clinic access does use real road times.</li>
-  <li>The 397 library outlets are a candidate list, not a checked inventory. Confirm host approval, space, power and accessibility.</li>
+  <li>Hospital radius and clinic reach are straight-line approximations converted from minutes at a fixed speed, not real drive times from your address. Existing-care access uses the same straight-line distance approximation.</li>
+  <li>Public library outlets are a candidate list, not a checked inventory. Confirm host approval, space, power and accessibility.</li>
   <li>The $55 per staff hour and $400 per clinic day are placeholder cost assumptions, shown as an estimate only.</li>
   <li>No patient-level data is used or stored.</li>
   </ul>
@@ -414,16 +446,14 @@ async function boot() {
   form.date_start.value = iso(7); form.date_end.value = iso(35);
   updateHints(); route();
   try {
-    const [opts, geo] = await Promise.all([api('/api/clinic-options'), fetch('/data/geography.json').then(r => r.json())]);
+    const opts = await api('/api/clinic-options');
     options = opts;
     form.service.replaceChildren(...Object.entries(opts.services).map(([k, v]) => new Option(v, k)));
-    const parts = [];
-    for (const f of geo.features) {
-      const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
-      const d = polys.map(p => p.map(ringPath).join('')).join('');
-      tractPaths.set(f.properties.id, d); parts.push(d);
-    }
-    landPath = parts.join('');
-  } catch (err) { show('Could not load the North Carolina data: ' + err.message); }
+    stateSelect.replaceChildren(new Option('Choose a state or district', ''), ...opts.states.map(s => new Option(s.name, s.code)));
+    stateSelect.addEventListener('change', async () => {
+      place = null; $('#hospital-name').value = ''; $('#place-status').textContent = 'Choose a suggestion so we use the exact address.';
+      try { await loadGeography(stateSelect.value); show(''); } catch (err) { show(err.message); }
+    });
+  } catch (err) { show('Could not load the national data catalog: ' + err.message); }
 }
 boot();
