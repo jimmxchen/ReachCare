@@ -1,0 +1,324 @@
+{
+  "places-2025-al.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27AL%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:41:55.493032+00:00",
+    "sha256": "de4d42a965d5cccdf3d849fb7b1ac3d9ed1d72c8db7e3c65e2a79d6cc0244c9d"
+  },
+  "places-2025-ak.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27AK%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:41:55.748833+00:00",
+    "sha256": "33670eb00e04a8675dc27c6b6c96585ad2c5c8a4e34940f451d81ee1e201bfc0"
+  },
+  "places-2025-az.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27AZ%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:41:56.190674+00:00",
+    "sha256": "a50675f658e209ad7df47ea07d2d63955d0cc4c9bda3ebbae130535251bc1c59"
+  },
+  "places-2025-ar.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27AR%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:41:56.496954+00:00",
+    "sha256": "60bb4eeade08afd534b3be930af12cd9e112679efd8bb135a6bdd445eae368b7"
+  },
+  "places-2025-ca.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27CA%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:00.060880+00:00",
+    "sha256": "4b6391b6e627ff2cc441b4bc9deacaf5fcb6201e1299f491d436a0156900b906"
+  },
+  "places-2025-co.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27CO%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:00.546886+00:00",
+    "sha256": "287ff6bcd8586a9954e42a1360eae9673c0f56dd602fbf073db9423e082a2ac5"
+  },
+  "places-2025-ct.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27CT%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:00.956684+00:00",
+    "sha256": "575ac4b9b4bb24e349bbbf3b532240d6fb426bdbb183c35728dfcbf4cb3e7a35"
+  },
+  "places-2025-de.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27DE%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:01.238987+00:00",
+    "sha256": "0bee772c480f88812ce3bfa8da885d1d05f7bbcb58b9299bf44b242d284ff41c"
+  },
+  "places-2025-dc.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27DC%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:01.531964+00:00",
+    "sha256": "b747d05205eaddf1298f47e9fa4a141c5df0eb3d32082acefb82bbf55757fcf5"
+  },
+  "places-2025-fl.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27FL%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:01.986677+00:00",
+    "sha256": "5894d08081ba2cdf6bf84c3dbd64cd95cb15006c9c5e0f79fb8e0615b899451b"
+  },
+  "places-2025-ga.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27GA%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:02.355104+00:00",
+    "sha256": "eabe7e4592f3a1b20bbf38338a579bbae987be032078ef59299417e5aa4e5ec1"
+  },
+  "places-2025-hi.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27HI%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:02.596459+00:00",
+    "sha256": "ff2f9898f4bac4a765a3084f23eaeac2e5251b008a018bd11ac1d27f0d966118"
+  },
+  "places-2025-id.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27ID%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:03.011702+00:00",
+    "sha256": "cd32e3f64eabefd80f53e7986350fcd6b705920065bd856d2657a2d6167c4544"
+  },
+  "places-2025-il.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27IL%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:03.388377+00:00",
+    "sha256": "a960f33c81218d199c8c32cd4d0ba171fc3bbdb0773396ecf99083770fac6d2d"
+  },
+  "places-2025-in.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27IN%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:03.806796+00:00",
+    "sha256": "09cc0de1f0657714ae2d6e696f30bff0a6150d539277ae2e0b70a60f61b60e66"
+  },
+  "places-2025-ia.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27IA%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:08.270522+00:00",
+    "sha256": "4ac7ab9c80e10995e96dea6a34a5a1913dd6ea326bfd65a5a64ea6eeb0ed0ac3"
+  },
+  "places-2025-ks.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27KS%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:08.593162+00:00",
+    "sha256": "15b21530096a74ce3d6577032532dd50540e356c67e2cc1c6f1d9900f28306a9"
+  },
+  "places-2025-ky.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27KY%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:08.857017+00:00",
+    "sha256": "feac99b00bb3ece7e9de00da8f174cb32c5718cfd1642c9803521a1cdafd3487"
+  },
+  "places-2025-la.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27LA%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:12.931052+00:00",
+    "sha256": "0a3d025a279ddd873bc204ada7861bc3e4002b3d1875ce7a34b96e871cc130c0"
+  },
+  "places-2025-me.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27ME%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:13.253886+00:00",
+    "sha256": "63bbc248180abeecd2b005ada8a552fd1dc4c93f5c7708aa7b5f954ec4c47742"
+  },
+  "places-2025-md.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27MD%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:13.555360+00:00",
+    "sha256": "c40f4e2a17ed4cd02551269dff036ce143962b484c207bae32be48f9de162f96"
+  },
+  "places-2025-ma.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27MA%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:13.844450+00:00",
+    "sha256": "4ff386a36ec7b2684c01c87c9e4a8a6fab35167c02f6c856676234b4113e8422"
+  },
+  "places-2025-mi.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27MI%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:14.438894+00:00",
+    "sha256": "c4a7e0c0160209db67e0c7b46902ccda6b64a3337e13c9e685fac56b5e6d3cd9"
+  },
+  "places-2025-mn.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27MN%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:14.863673+00:00",
+    "sha256": "75c5539fce8cd39efdc81d7bf3d56f940978a226b5463328b12bf0d67a7ae2be"
+  },
+  "places-2025-ms.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27MS%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:15.133723+00:00",
+    "sha256": "0b2793da640af2e71da54b9231e174b7c603244e16229f9b1e10f86cd4d8c799"
+  },
+  "places-2025-mo.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27MO%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:15.737093+00:00",
+    "sha256": "6dbef4e7fa9bd47e78f676db4cd4af9ea3b76607f70c8d0fc8711f16cfde51f8"
+  },
+  "places-2025-mt.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27MT%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:19.030254+00:00",
+    "sha256": "4aa16e45b01cd1326d2ebb9512ea6a78f56f238b216a0b6c92ee1d54a05c9078"
+  },
+  "places-2025-ne.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27NE%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:19.318867+00:00",
+    "sha256": "bcb6c2c0a09dee7968990b56b456b191942d011233bf806a64c9956b062288f1"
+  },
+  "places-2025-nv.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27NV%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:19.600241+00:00",
+    "sha256": "1b92755ad30289f9cd4bea338610f9f4b892d483165c42390a7e47781e51f0c1"
+  },
+  "places-2025-nh.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27NH%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:19.858332+00:00",
+    "sha256": "0d43fd7887755862e53d4e62007fc561c936b4d7118561ba7099055fa5329020"
+  },
+  "places-2025-nj.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27NJ%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:20.441349+00:00",
+    "sha256": "0a6c1d4cfcfd2494e5ac45251f7779d7bb23be9eb5240c190fb8cc3488b783ca"
+  },
+  "places-2025-nm.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27NM%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:20.690166+00:00",
+    "sha256": "646a003556851d20b21455163fc9be4487f4d79107b691373b4f8bf3347a9e7c"
+  },
+  "places-2025-ny.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27NY%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:21.377740+00:00",
+    "sha256": "c98941628995be91df43e1520450ef40ec500d1a89e9ab8019d7dd672ba70159"
+  },
+  "places-2025-nc.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27NC%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:22.098601+00:00",
+    "sha256": "221e3da70d5175fd26ca6366697f2cb4c6ce4e2623a81644bc5b34789b27060d"
+  },
+  "places-2025-nd.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27ND%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:22.327440+00:00",
+    "sha256": "304c876d3ed7ef4a9aa00530ff753ae00cdf1c044ff7c5bbfc834d53c479c1e2"
+  },
+  "places-2025-oh.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27OH%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:23.887472+00:00",
+    "sha256": "1cf399b25874f75315731669c82149deb1a03385a5f1c8856b6689688df9e5db"
+  },
+  "places-2025-ok.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27OK%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:24.395514+00:00",
+    "sha256": "1cffdbd9c83a46e477aca9e0a53c6a5ed00ab63c9fc8e801753b06fecdabd3bd"
+  },
+  "places-2025-or.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27OR%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:24.699557+00:00",
+    "sha256": "898eef437cb9d051eb173c720e63c36537c8a99305ce6bc6f5b53b373bfe94af"
+  },
+  "places-2025-pa.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27PA%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:26.731198+00:00",
+    "sha256": "1517086daaebb338f477acd9fa94863bf471311a5f152383586f6065ffc28814"
+  },
+  "places-2025-ri.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27RI%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:26.964592+00:00",
+    "sha256": "7dcc16bfdb0162b236d0f121836a94e1acb04951a9a09edd900a5e19a8ff881c"
+  },
+  "places-2025-sc.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27SC%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:27.893392+00:00",
+    "sha256": "c49380309ba3f5021c4897e3318da146a7e108b08d3fa411ab2705771821ed03"
+  },
+  "places-2025-sd.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27SD%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:28.111234+00:00",
+    "sha256": "84ca5c2124b2e7fd1a4c5724f4394d90212b368ddd38f99909745558690aacdd"
+  },
+  "places-2025-tn.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27TN%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:28.619785+00:00",
+    "sha256": "4d1120c104ad7d3b38adb47e3e5ac7bb74a0b836bfa4b971cf18f6fbf631649f"
+  },
+  "places-2025-tx.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27TX%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:29.808453+00:00",
+    "sha256": "44b1e7f21e61ae1daa45335acd0b0c164cf9054eda3757ebc4422f4b690d1751"
+  },
+  "places-2025-ut.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27UT%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:30.085147+00:00",
+    "sha256": "acef5df9e50ca7080c26a9455cc0c83360cb1824187ad3ce927517a7486f76a4"
+  },
+  "places-2025-vt.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27VT%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:30.302881+00:00",
+    "sha256": "9b66157298dde3cfccc7e88e409db4dd2b15c4a0dcb3f823d95b371831d15a26"
+  },
+  "places-2025-va.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27VA%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:30.669245+00:00",
+    "sha256": "07b3a4494434f2bf51f60e6ad39827c8b34929535c196a587eccfa46c8fca5c4"
+  },
+  "places-2025-wa.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27WA%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:30.967354+00:00",
+    "sha256": "886d950a93c25f6086fb0b2194126ea7a9882f11470e2d0d621ec7cb95bd62ad"
+  },
+  "places-2025-wv.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27WV%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:31.269497+00:00",
+    "sha256": "0ed298dc744c2a3d614811cd57f637ceed1dc03cca19bfb81369b6b6e09170dd"
+  },
+  "places-2025-wi.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27WI%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:31.627305+00:00",
+    "sha256": "f07fecdead9704175ba07629ad8a09bf1f4167ca97929d5f4b2737cd90c11761"
+  },
+  "places-2025-wy.json": {
+    "url": "https://data.cdc.gov/resource/yjkw-uj5s.json?%24select=stateabbr%2Ccountyname%2Ccountyfips%2Ctractfips%2Cgeolocation%2Cbphigh_crudeprev%2Cbphigh_crude95ci%2Cdiabetes_crudeprev%2Cdiabetes_crude95ci%2Ccopd_crudeprev%2Ccopd_crude95ci%2Ccasthma_crudeprev%2Ccasthma_crude95ci&%24where=stateabbr%3D%27WY%27&%24order=tractfips&%24limit=20000",
+    "retrieved_at": "2026-10-11T05:42:31.828122+00:00",
+    "sha256": "328a27e6de2dc78b16b2fb9cac6b3b397030675d52ca1e04df771597344b4601"
+  },
+  "acs-2024-b01001-us-tract.dat": {
+    "url": "https://www2.census.gov/programs-surveys/acs/summary_file/2024/table-based-SF/data/5YRData/acsdt5y2024-b01001.dat",
+    "retrieved_at": "2026-10-11T05:42:39.436679+00:00",
+    "sha256": "98429a56457783adb5bdfe3fc611f448355d2eafb7afa9563693843eafe181f3",
+    "subset": "Original header and 50-state plus DC census tract rows"
+  },
+  "acs-2024-b08201-us-tract.dat": {
+    "url": "https://www2.census.gov/programs-surveys/acs/summary_file/2024/table-based-SF/data/5YRData/acsdt5y2024-b08201.dat",
+    "retrieved_at": "2026-10-11T05:42:42.863717+00:00",
+    "sha256": "2a12e46f47341fe4521345eea5150c87e6366db336fc77c932d10482308da070",
+    "subset": "Original header and 50-state plus DC census tract rows"
+  },
+  "pls-fy2024.zip": {
+    "url": "https://www.imls.gov/sites/default/files/2026-06/pls_fy2024_csv.zip",
+    "retrieved_at": "2026-10-10T16:34:49.195691+00:00",
+    "sha256": "6aad0913b6630879f0f859e4b54cd062b3c6e9853218153ca5e4aa2d678a11e7"
+  },
+  "hrsa-sites-00000.json": {
+    "url": "https://gisportal.hrsa.gov/server/rest/services/HealthCareFacilities/PrimaryHealthCareFacilities_FS/MapServer/0/query?where=1%3D1&outFields=OBJECTID%2CSITE_NM%2CSITE_ADDRESS%2CSITE_CITY%2CSITE_STATE_ABBR%2CSITE_ZIP_CD%2CSTATE_COUNTY_FIPS_CD%2CHCC_STATUS_DESC%2CHCC_TYP_DESC&returnGeometry=true&outSR=4326&orderByFields=OBJECTID&resultOffset=0&resultRecordCount=2000&f=json",
+    "retrieved_at": "2026-10-11T05:42:48.429453+00:00",
+    "sha256": "a41c5b96e9d68838f90ffc7a3f15bdcb25ccc5af28965186237e7bb008ee966d"
+  },
+  "hrsa-sites-02000.json": {
+    "url": "https://gisportal.hrsa.gov/server/rest/services/HealthCareFacilities/PrimaryHealthCareFacilities_FS/MapServer/0/query?where=1%3D1&outFields=OBJECTID%2CSITE_NM%2CSITE_ADDRESS%2CSITE_CITY%2CSITE_STATE_ABBR%2CSITE_ZIP_CD%2CSTATE_COUNTY_FIPS_CD%2CHCC_STATUS_DESC%2CHCC_TYP_DESC&returnGeometry=true&outSR=4326&orderByFields=OBJECTID&resultOffset=2000&resultRecordCount=2000&f=json",
+    "retrieved_at": "2026-10-11T05:42:48.735291+00:00",
+    "sha256": "56f2c321dea12e0fa44595dc24ebd223f5d6871fe4fca5a3492920557979e7e3"
+  },
+  "hrsa-sites-04000.json": {
+    "url": "https://gisportal.hrsa.gov/server/rest/services/HealthCareFacilities/PrimaryHealthCareFacilities_FS/MapServer/0/query?where=1%3D1&outFields=OBJECTID%2CSITE_NM%2CSITE_ADDRESS%2CSITE_CITY%2CSITE_STATE_ABBR%2CSITE_ZIP_CD%2CSTATE_COUNTY_FIPS_CD%2CHCC_STATUS_DESC%2CHCC_TYP_DESC&returnGeometry=true&outSR=4326&orderByFields=OBJECTID&resultOffset=4000&resultRecordCount=2000&f=json",
+    "retrieved_at": "2026-10-11T05:42:49.042662+00:00",
+    "sha256": "7d632cdf4cd69c64a1eca307a6a5f6e669aef9439247a3351a98554f9c7554a3"
+  },
+  "hrsa-sites-06000.json": {
+    "url": "https://gisportal.hrsa.gov/server/rest/services/HealthCareFacilities/PrimaryHealthCareFacilities_FS/MapServer/0/query?where=1%3D1&outFields=OBJECTID%2CSITE_NM%2CSITE_ADDRESS%2CSITE_CITY%2CSITE_STATE_ABBR%2CSITE_ZIP_CD%2CSTATE_COUNTY_FIPS_CD%2CHCC_STATUS_DESC%2CHCC_TYP_DESC&returnGeometry=true&outSR=4326&orderByFields=OBJECTID&resultOffset=6000&resultRecordCount=2000&f=json",
+    "retrieved_at": "2026-10-11T05:42:49.397631+00:00",
+    "sha256": "3f6b059594c94ab37a4c27b18cc3e6da083c7d47bd3b56d7d77977b467244bd6"
+  },
+  "hrsa-sites-08000.json": {
+    "url": "https://gisportal.hrsa.gov/server/rest/services/HealthCareFacilities/PrimaryHealthCareFacilities_FS/MapServer/0/query?where=1%3D1&outFields=OBJECTID%2CSITE_NM%2CSITE_ADDRESS%2CSITE_CITY%2CSITE_STATE_ABBR%2CSITE_ZIP_CD%2CSTATE_COUNTY_FIPS_CD%2CHCC_STATUS_DESC%2CHCC_TYP_DESC&returnGeometry=true&outSR=4326&orderByFields=OBJECTID&resultOffset=8000&resultRecordCount=2000&f=json",
+    "retrieved_at": "2026-10-11T05:42:49.677143+00:00",
+    "sha256": "a34b7f07a4ff0a9dbd36408df260c7b6c61ffe40d8c592ffe7c42d2b8904969d"
+  },
+  "hrsa-sites-10000.json": {
+    "url": "https://gisportal.hrsa.gov/server/rest/services/HealthCareFacilities/PrimaryHealthCareFacilities_FS/MapServer/0/query?where=1%3D1&outFields=OBJECTID%2CSITE_NM%2CSITE_ADDRESS%2CSITE_CITY%2CSITE_STATE_ABBR%2CSITE_ZIP_CD%2CSTATE_COUNTY_FIPS_CD%2CHCC_STATUS_DESC%2CHCC_TYP_DESC&returnGeometry=true&outSR=4326&orderByFields=OBJECTID&resultOffset=10000&resultRecordCount=2000&f=json",
+    "retrieved_at": "2026-10-11T05:42:49.975622+00:00",
+    "sha256": "cae17cbad04f8b77076c643d39a6de3ace7f105855b5d9ece5c46c4e9da0d235"
+  },
+  "hrsa-sites-12000.json": {
+    "url": "https://gisportal.hrsa.gov/server/rest/services/HealthCareFacilities/PrimaryHealthCareFacilities_FS/MapServer/0/query?where=1%3D1&outFields=OBJECTID%2CSITE_NM%2CSITE_ADDRESS%2CSITE_CITY%2CSITE_STATE_ABBR%2CSITE_ZIP_CD%2CSTATE_COUNTY_FIPS_CD%2CHCC_STATUS_DESC%2CHCC_TYP_DESC&returnGeometry=true&outSR=4326&orderByFields=OBJECTID&resultOffset=12000&resultRecordCount=2000&f=json",
+    "retrieved_at": "2026-10-11T05:42:50.290014+00:00",
+    "sha256": "8145e9ba9b4928a9c9ad5905772bf566bbb9938577cff415463c92cd35b2af5c"
+  },
+  "hrsa-sites-14000.json": {
+    "url": "https://gisportal.hrsa.gov/server/rest/services/HealthCareFacilities/PrimaryHealthCareFacilities_FS/MapServer/0/query?where=1%3D1&outFields=OBJECTID%2CSITE_NM%2CSITE_ADDRESS%2CSITE_CITY%2CSITE_STATE_ABBR%2CSITE_ZIP_CD%2CSTATE_COUNTY_FIPS_CD%2CHCC_STATUS_DESC%2CHCC_TYP_DESC&returnGeometry=true&outSR=4326&orderByFields=OBJECTID&resultOffset=14000&resultRecordCount=2000&f=json",
+    "retrieved_at": "2026-10-11T05:42:50.607498+00:00",
+    "sha256": "15e4349f7503fc4a3054169a2672a0c36b188f63ebecede843b43c89066667e6"
+  },
+  "hrsa-sites-16000.json": {
+    "url": "https://gisportal.hrsa.gov/server/rest/services/HealthCareFacilities/PrimaryHealthCareFacilities_FS/MapServer/0/query?where=1%3D1&outFields=OBJECTID%2CSITE_NM%2CSITE_ADDRESS%2CSITE_CITY%2CSITE_STATE_ABBR%2CSITE_ZIP_CD%2CSTATE_COUNTY_FIPS_CD%2CHCC_STATUS_DESC%2CHCC_TYP_DESC&returnGeometry=true&outSR=4326&orderByFields=OBJECTID&resultOffset=16000&resultRecordCount=2000&f=json",
+    "retrieved_at": "2026-10-11T05:42:50.898377+00:00",
+    "sha256": "17e3bf891c68943f1c501c024c3fe7dd41ac427925167018a121e2e66d26da73"
+  },
+  "hrsa-sites-18000.json": {
+    "url": "https://gisportal.hrsa.gov/server/rest/services/HealthCareFacilities/PrimaryHealthCareFacilities_FS/MapServer/0/query?where=1%3D1&outFields=OBJECTID%2CSITE_NM%2CSITE_ADDRESS%2CSITE_CITY%2CSITE_STATE_ABBR%2CSITE_ZIP_CD%2CSTATE_COUNTY_FIPS_CD%2CHCC_STATUS_DESC%2CHCC_TYP_DESC&returnGeometry=true&outSR=4326&orderByFields=OBJECTID&resultOffset=18000&resultRecordCount=2000&f=json",
+    "retrieved_at": "2026-10-11T05:42:51.055569+00:00",
+    "sha256": "96e9b179f2bf0fd8937e31f552bd1e48f74e8df2a4494be5757828796c340942"
+  }
+}
