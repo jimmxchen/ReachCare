@@ -305,6 +305,26 @@ class SitingTests(unittest.TestCase):
                 self.app.site(self.params(**bad))
 
 
+class ElevenLabsTests(unittest.TestCase):
+    def test_wav_voice_note_uses_matching_upload_filename(self):
+        from planner import elevenlabs
+        wav = b"RIFF" + b"\x00" * 4 + b"WAVE" + b"audio samples"
+        with patch("planner.elevenlabs._key", return_value="test-key"), \
+                patch("planner.elevenlabs._call", return_value=b'{"text":"hola","language_code":"es"}') as send:
+            result = elevenlabs.transcribe(wav, "audio/wav")
+        self.assertEqual(result, {"text": "hola", "language": "es"})
+        upload = send.call_args.args[0].data
+        self.assertIn(b'filename="voice-note.wav"', upload)
+        self.assertIn(b"Content-Type: audio/wav", upload)
+
+    def test_corrupt_wav_is_rejected_before_upload(self):
+        from planner import elevenlabs
+        with patch("planner.elevenlabs._call") as send:
+            with self.assertRaisesRegex(RuntimeError, "not a playable WAV"):
+                elevenlabs.transcribe(b"broken audio", "audio/wav")
+        send.assert_not_called()
+
+
 class BotTests(unittest.TestCase):
     PLANS = [{"hospital": {"name": "Test Hospital"}, "clinics": [
         {"id": "a", "name": "Near Library", "address": "1 Main St", "city": "Raleigh", "county": "Wake", "lat": 35.78, "lon": -78.64, "date": "2026-11-02", "service": "blood-pressure"},

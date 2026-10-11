@@ -189,31 +189,91 @@
     document.getElementById('reset').addEventListener('click', async () => {
       await ask({sender, reset: true}).catch(() => {}); thread.replaceChildren(); sendText('Hi');
     });
-    let rec = null, chunks = [];
-    mic.addEventListener('click', async () => {
-      if (rec) { rec.stop(); return; }
-      if (busy) return;
+    function wavFromAudioBuffer(buffer) {
+      const rate = 16000, frames = Math.floor(buffer.duration * rate);
+      if (frames < rate) throw new Error('Record for at least one second, then try again.');
+      const output = new ArrayBuffer(44 + frames * 2), view = new DataView(output);
+      const ascii = (at, value) => { for (let i = 0; i < value.length; i++) view.setUint8(at + i, value.charCodeAt(i)); };
+      ascii(0, 'RIFF'); view.setUint32(4, output.byteLength - 8, true); ascii(8, 'WAVE');
+      ascii(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true); view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true);
+      view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+      ascii(36, 'data'); view.setUint32(40, frames * 2, true);
+      const channels = Array.from({length: buffer.numberOfChannels}, (_, i) => buffer.getChannelData(i));
+      for (let i = 0; i < frames; i++) {
+        const position = i * buffer.sampleRate / rate, before = Math.floor(position);
+        const blend = position - before;
+        let sample = 0;
+        for (const channel of channels) {
+          const first = channel[Math.min(before, channel.length - 1)];
+          const second = channel[Math.min(before + 1, channel.length - 1)];
+          sample += first + (second - first) * blend;
+        }
+        sample = Math.max(-1, Math.min(1, sample / channels.length));
+        view.setInt16(44 + i * 2, sample < 0 ? sample * 32768 : sample * 32767, true);
+      }
+      return new Blob([output], {type: 'audio/wav'});
+    }
+    async function playableWav(blob) {
+      if (blob.size < 1000) throw new Error('The recording was empty. Record for at least one second, then try again.');
+      const context = new (window.AudioContext || window.webkitAudioContext)();
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({audio: true});
-        rec = new MediaRecorder(stream); chunks = [];
-        rec.ondataavailable = e => chunks.push(e.data);
-        rec.onstop = async () => {
+        const decoded = await context.decodeAudioData(await blob.arrayBuffer());
+        return wavFromAudioBuffer(decoded);
+      } catch (err) {
+        if (err.message?.startsWith('Record for at least')) throw err;
+        throw new Error('The browser could not read that recording. Please record again.');
+      } finally { await context.close(); }
+    }
+    let rec = null, chunks = [], recordedAt = 0, recordingTimer = null, recordingError = false;
+    mic.addEventListener('click', async () => {
+      if (rec) { if (rec.state === 'recording') rec.stop(); return; }
+      if (busy) return;
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({audio: true});
+        const format = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus']
+          .find(type => MediaRecorder.isTypeSupported(type));
+        rec = new MediaRecorder(stream, format ? {mimeType: format} : undefined);
+        const recorder = rec;
+        chunks = []; recordingError = false;
+        recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+        recorder.onerror = () => { recordingError = true; };
+        recorder.onstop = async () => {
+          clearTimeout(recordingTimer);
           stream.getTracks().forEach(t => t.stop());
-          const blob = new Blob(chunks, {type: rec.mimeType}); rec = null;
+          const blob = new Blob(chunks, {type: recorder.mimeType || chunks[0]?.type || ''});
+          const duration = performance.now() - recordedAt;
+          rec = null;
           mic.textContent = 'Record voice'; mic.classList.remove('rec');
           document.getElementById('examples')?.remove();
-          const mine = bubble('me', '🎙 Voice note'); setBusy(true);
-          const wait = typing('Listening to your voice note…');
+          setBusy(true);
+          const wait = typing('Preparing your voice note…');
           try {
-            const b64 = await new Promise(res => { const f = new FileReader(); f.onload = () => res(f.result.split(',')[1]); f.readAsDataURL(blob); });
-            const data = await ask({sender, audio_b64: b64, mime: blob.type});
+            if (recordingError || duration < 1000) throw new Error('Record for at least one second, then try again.');
+            const wav = await playableWav(blob);
+            const b64 = await new Promise((res, rej) => {
+              const f = new FileReader(); f.onload = () => res(f.result.split(',')[1]);
+              f.onerror = () => rej(new Error('The browser could not read that recording. Please record again.'));
+              f.readAsDataURL(wav);
+            });
+            wait.querySelector('.typing > span:last-child').textContent = 'Listening to your voice note…';
+            const mine = bubble('me', '🎙 Voice note');
+            const data = await ask({sender, audio_b64: b64, mime: wav.type});
             mine.textContent = ''; mine.append(document.createTextNode('🎙 ' + data.transcript));
             wait.remove(); bubble('bot', data.reply, audioUrl(data));
           } catch (err) { wait.remove(); bubble('bot', err.message); }
           finally { setBusy(false); }
         };
-        rec.start(); mic.textContent = 'Stop and send'; mic.classList.add('rec');
-      } catch { bubble('bot', 'Microphone access was blocked. Allow it in your browser and try again.'); }
+        rec.start(); recordedAt = performance.now();
+        recordingTimer = setTimeout(() => { if (rec?.state === 'recording') rec.stop(); }, 60000);
+        mic.textContent = 'Stop and send'; mic.classList.add('rec');
+      } catch (err) {
+        stream?.getTracks().forEach(t => t.stop());
+        bubble('bot', err?.name === 'NotAllowedError'
+          ? 'Microphone access was blocked. Allow it in your browser and try again.'
+          : 'Could not start voice recording in this browser. Try reloading the page.');
+      }
     });
   </script>
 </body>

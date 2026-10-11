@@ -54,17 +54,27 @@ def _call(request, timeout=60):
 
 def transcribe(audio, mime="audio/mp4"):
     """Return {"text", "language"} (ISO code such as "es") for a voice memo."""
-    key = _key()
     if len(audio) > 25_000_000:
         raise RuntimeError("Voice note is too large")
+    if not audio:
+        raise RuntimeError("The voice note was empty. Record for at least one second and try again.")
+    content_type = (mime or "application/octet-stream").split(";", 1)[0].strip().lower()
+    if content_type in ("audio/wav", "audio/x-wav") and not (audio[:4] == b"RIFF" and audio[8:12] == b"WAVE"):
+        raise RuntimeError("The voice recording is not a playable WAV file. Please record it again.")
+    extension = {"audio/wav": ".wav", "audio/x-wav": ".wav", "audio/webm": ".webm",
+                 "audio/mp4": ".m4a", "audio/x-m4a": ".m4a", "audio/mpeg": ".mp3",
+                 "audio/mp3": ".mp3", "audio/ogg": ".ogg"}.get(content_type, "")
+    key = _key()
     last = None
     for model in STT_MODELS:
-        body, ctype = _multipart({"model_id": model}, "voice-note", audio, mime or "application/octet-stream")
+        body, ctype = _multipart({"model_id": model}, "voice-note" + extension, audio, content_type)
         request = urllib.request.Request(f"{API}/speech-to-text", body, {"xi-api-key": key, "Content-Type": ctype})
         try:
             data = json.loads(_call(request))
             return {"text": (data.get("text") or "").strip(), "language": (data.get("language_code") or "en")[:3]}
         except RuntimeError as exc:
+            if "invalid_audio" in str(exc):
+                raise RuntimeError("The voice recording could not be decoded. Record for at least one second and try again.") from None
             last = exc
             if "HTTP 4" not in str(exc):
                 raise
