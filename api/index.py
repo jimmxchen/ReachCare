@@ -19,17 +19,21 @@ server.Handler.app = server.Application(runtime_dir=os.path.join(tempfile.gettem
 
 
 class handler(server.Handler):
-    def parse_request(self):
-        ok = super().parse_request()
-        if not ok:
-            return False
+    def _restore_path(self):
         parts = urlparse(self.path)
         query = dict(parse_qsl(parts.query, keep_blank_values=True))
         original = query.pop("__p", None)
         if original is not None:
             rest = urlencode(query)
             self.path = "/" + original.lstrip("/") + (f"?{rest}" if rest else "")
-        return True
+
+    def do_GET(self):
+        self._restore_path()
+        super().do_GET()
+
+    def do_POST(self):
+        self._restore_path()
+        super().do_POST()
 
     def log_message(self, format, *args):  # Vercel captures stdout; keep logs quiet
         pass

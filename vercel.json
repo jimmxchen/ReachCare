@@ -1,11 +1,11 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [{ "source": "/(.*)", "destination": "/api/index?__p=/$1" }],
-  "functions": {
-    "api/index.py": {
-      "includeFiles": "{web,planner,data}/**",
-      "excludeFiles": "{data/snapshots,**/__pycache__,bot,tests,.runtime}/**",
-      "maxDuration": 30
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python",
+      "config": { "includeFiles": ["web/**", "planner/**", "data/**", "server.py"], "excludeFiles": "data/snapshots/**", "maxLambdaSize": "100mb" }
     }
-  }
+  ],
+  "routes": [{ "src": "/(.*)", "dest": "/api/index.py?__p=/$1" }]
 }
