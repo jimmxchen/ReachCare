@@ -1,0 +1,6 @@
+.env
+.runtime
+bot/node_modules
+**/__pycache__
+data/snapshots
+tests
