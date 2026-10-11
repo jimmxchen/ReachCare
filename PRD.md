@@ -1,4 +1,4 @@
-# Product Requirements Document: Rural Outreach Planner
+# Product Requirements Document: National Rural Outreach Planner
 
 **Status:** Draft for HackNC  
 **Date:** October 10, 2026  
@@ -7,7 +7,7 @@
 
 ## 1. Product summary
 
-Rural Outreach Planner helps a hospital decide **which service to bring, where to hold it, and when to schedule it** for a mobile clinic or outreach day. It combines public health and population data with verified care locations, potential venues, road travel times, and the hospital's operational constraints. Its central output is a ranked, explainable set of feasible event plans.
+Rural Outreach Planner helps a hospital decide **which service to bring, where to hold it, and when to schedule it** for a mobile clinic or outreach day. It combines public health and population data with verified care locations, potential venues, approximate geographic travel, and the hospital's operational constraints. Its central output is a ranked, explainable set of feasible event plans.
 
 The core calculations and rankings are deterministic. A simulation layer tests whether rankings remain stable when reasonable assumptions change. A language model may summarize a completed recommendation, but it does not calculate scores, choose sites, or invent missing facts.
 
@@ -23,7 +23,7 @@ The planning decision therefore requires three kinds of evidence in one place:
 2. **Service and travel geography:** what relevant care already exists and how long residents might travel.
 3. **Operational feasibility:** which venues, dates, staff, and equipment the hospital can actually use.
 
-North Carolina's 2026 NC ROOTS request for applications calls for regional gap assessments, coordination with existing mobile units, and outreach for high-priority chronic-disease and cancer services. This provides a concrete local use case for the product. [Source: NCDHHS NC ROOTS RFA](https://www.ncdhhs.gov/rfa-2026-ncroots/download)
+The product is designed for state-by-state planning across the United States, with nationally available public data and local partner inputs.
 
 ## 3. Goals and success measures
 
@@ -37,7 +37,7 @@ North Carolina's 2026 NC ROOTS request for applications calls for regional gap a
 
 ### MVP success criteria
 
-- A planner can configure one service and one geographic region, upload or edit operational inputs, and receive the top three feasible plans.
+- A planner can configure one service and one selected state or county, upload or edit operational inputs, and receive the top three feasible plans.
 - Every recommended plan shows its score breakdown, newly covered tracts, approximate newly covered population, event capacity, and unverified assumptions.
 - Re-running the same data and configuration with the same simulation seed produces the same results.
 - A venue that violates a hard requirement is never presented as schedulable.
@@ -60,11 +60,11 @@ After a real deployment, evaluate actual events using turnout, services delivere
 
 ### Hackathon MVP
 
-- One North Carolina region, one selected outreach service, and roughly 15–30 candidate venues.
+- One selected state or county, one outreach service, and a geographically distributed shortlist of candidate venues.
 - Public, aggregate data for community indicators and initial care/venue discovery.
 - A hospital-provided spreadsheet or form for venue verification and event resources; sample operational data may be used for a demonstration.
-- Road-time access calculation, deterministic ranking, uncertainty simulations, comparison view, and downloadable plan.
-- A live operations layer using planner updates, National Weather Service forecasts/alerts, and North Carolina road incidents; changing inputs can trigger a new, versioned recommendation.
+- Coordinate-based estimated access, deterministic ranking, uncertainty simulations, comparison view, and downloadable plan.
+- A live operations layer using planner updates, National Weather Service forecasts/alerts, and state-specific road incidents when a compatible public feed is available; changing inputs can trigger a new, versioned recommendation.
 - No patient-level records or patient booking.
 
 ### Later phases
@@ -90,8 +90,8 @@ After a real deployment, evaluate actual events using turnout, services delivere
 | Health and community indicators | Census tract ID, service-relevant measure, estimate, interval where available, data year | [CDC PLACES tract data](https://data.cdc.gov/500-Cities-Places/PLACES-Census-Tract-Data-GIS-Friendly-Format-2025-/yjkw-uj5s); modeled estimates, not observed patient counts |
 | Population and transport | Tract ID, eligible population estimate, no-vehicle or other selected access measure, margin of error where available | [Census ACS 5-year data](https://api.census.gov/data/2024/acs/acs5.html); match geography and record vintage |
 | Geographic boundaries | Tract ID and geometry | [Census tract boundary files](https://www.census.gov/geographies/mapping-files/2023/geo/carto-boundary-file.html) |
-| Existing care | Site ID, address, site type, service offered, target-population eligibility, service schedule, verification date | Seed from [NC Safety Net Sites](https://www.ncdhhs.gov/divisions/office-rural-health/safety-net-resources/safety-net-sites); service and schedule must be verified by staff |
-| Candidate venues | Venue ID, name, address, coordinates, venue type, host, verification status | Seed from public directories such as [NC DPI's school directory](https://www.dpi.nc.gov/districts-schools/district-operations/financial-and-business-services/demographics-and-finances/eddie) and [IMLS library outlet data](https://www.imls.gov/research-evaluation/surveys/public-libraries-survey-pls), plus hospital/community partners |
+| Existing care | Site ID, address, site type, service offered, target-population eligibility, service schedule, verification date | Seed from [HRSA health center service delivery sites](https://data.hrsa.gov/data/download); service, eligibility, and schedule must be verified by staff |
+| Candidate venues | Venue ID, name, address, coordinates, venue type, host, verification status | Seed from public directories such as [state education directories] and [IMLS public library outlet data](https://www.imls.gov/research-evaluation/surveys/public-libraries-survey-pls), plus hospital/community partners |
 | Venue feasibility | Available dates, host approval, accessible entrance, parking, private space, power, connectivity if needed, physical limit, estimated cost | Hospital or host confirmation; unknown values remain unknown |
 | Event resources | Staff roles/count, service rate per staff member, clinical hours, setup time, equipment, vehicle availability, total budget | Hospital operations input |
 | Historical events (optional) | Site, service, date, staff, appointments, walk-ins, completed services, referrals, follow-ups | Hospital-provided aggregate or de-identified history; not required for MVP |
@@ -106,20 +106,20 @@ The product combines slow-changing baseline indicators with recent operational a
 | --- | --- | --- |
 | Venue, staff, vehicle, and equipment status | Hospital/host updates as changes occur | Whether a site–date plan is feasible; immediate reranking |
 | Pending referrals, waitlist totals, missed follow-ups, and prior event demand by area and service | Hospital partner; aggregate or de-identified, potentially daily | Recent service-specific demand, after geographic quality checks |
-| Road closures and incidents | Public [NCDOT TIMS incident API](https://tims.ncdot.gov/tims/V2/webservices), updated as incidents change | Route warning or travel-time recalculation when a compatible live-routing method is available |
+| Road closures and incidents | State and local DOT incident feeds where public APIs are available; coverage varies by jurisdiction | Route warning or travel-time recalculation when a compatible live-routing method is available |
 | Hourly forecasts and active alerts | Public [National Weather Service API](https://www.weather.gov/documentation/services-web-api) | Outdoor-event suitability and near-term schedule risk |
-| Asthma/COPD emergency-department trends | Public [NC DETECT dashboard](https://ncdetect.org/asthma-copd-dashboard/), with monthly trends updated around the 15th | Optional recent context for a relevant respiratory service; not a general chronic-care demand feed |
-| Respiratory-virus trends | Public [NC respiratory dashboard](https://www.dph.ncdhhs.gov/programs/epidemiology/communicable-disease/respiratory-diseases/dashboard), updated weekly | Optional seasonal context for relevant services |
+| Asthma/COPD emergency-department trends | Public CDC and state health-department respiratory surveillance where downloadable, geographically compatible data are available | Optional recent context for a relevant respiratory service; not a general chronic-care demand feed |
+| Respiratory-virus trends | Public CDC or state respiratory dashboards, with release cadence varying by source | Optional seasonal context for relevant services |
 
-Detailed near-real-time NC DETECT records require authorized access and are outside the public-data MVP. Public respiratory trends and weather should not be used as substitutes for service-specific demand for a blood-pressure or diabetes event. Every dynamic value has an observation time, fetch time, and stale-data state.
+Detailed near-real-time health records generally require authorized access and are outside the public-data MVP. Public respiratory trends and weather should not be used as substitutes for service-specific demand for a blood-pressure or diabetes event. Every dynamic value has an observation time, fetch time, and stale-data state.
 
 ### Historical series for priority decisions
 
-The application should preserve observations by time period rather than overwrite each feed with its latest value. Useful public series include monthly [NC DETECT asthma/COPD ED visit trends](https://ncdetect.org/asthma-copd-dashboard/) at ZIP, county, and state levels since 2017; downloadable [NC respiratory dashboard data](https://www.dph.ncdhhs.gov/programs/epidemiology/communicable-disease/respiratory-diseases/dashboard/data-behind-dashboards) updated weekly; and [NC overdose surveillance](https://www.dph.ncdhhs.gov/programs/chronic-disease-and-injury/injury-and-violence-prevention-branch/north-carolina-overdose-epidemic-data) updated monthly. These series inform only matching outreach services. Relevant hospital-provided series, such as weekly pending referrals or missed follow-ups by service and area, can inform other services if a partner supplies them.
+The application should preserve observations by time period rather than overwrite each feed with its latest value. Useful public series include CDC and state public-health dashboard series when their geography, definitions, and release history match the selected outreach service. These series inform only matching outreach services. Relevant hospital-provided series, such as weekly pending referrals or missed follow-ups by service and area, can inform other services if a partner supplies them.
 
 Public dashboard history does not imply a stable automated API. Verify an export path for the selected pilot series; a versioned CSV import is an acceptable MVP method.
 
-Road and weather feeds primarily support operational history and retrospective evaluation. The [NWS alerts API](https://www.weather.gov/documentation/services-web-api) exposes only a short recent alert window, so the application should save dated snapshots if it needs a longer local history. NCDOT exposes incident queries by active date, but historical availability should be checked before relying on it; save snapshots for reproducible runs. Annual [CDC PLACES releases](https://www.cdc.gov/places/faqs/index.html) are a slow-changing geographic baseline and should not be treated as a monthly demand series.
+Road and weather feeds primarily support operational history and retrospective evaluation. The [NWS alerts API](https://www.weather.gov/documentation/services-web-api) exposes only a short recent alert window, so the application should save dated snapshots if it needs a longer local history. State DOT incident data varies in availability and historical depth; verify coverage before relying on it and save snapshots for reproducible runs. Annual [CDC PLACES releases](https://www.cdc.gov/places/faqs/index.html) are a slow-changing geographic baseline and should not be treated as a monthly demand series.
 
 Store each time-series point with `signal`, `service`, `geography_type`, `geography_id`, `period_start`, `period_end`, `value`, `denominator`, `unit`, `published_at`, `retrieved_at`, `source`, `provisional`, and `revision_id`. Keep original downloaded snapshots so revised provisional data can be distinguished from what a planner knew at the time.
 
@@ -139,7 +139,7 @@ The system joins tract-level public data by tract identifier, validates units an
 
 ### FR-3: Calculate current and proposed access
 
-For each tract, calculate road travel time to the closest **verified, relevant** existing service and each candidate venue. For the MVP, a tract representative point may be used; the interface labels travel-time estimates as approximate, especially for large rural tracts. A routing matrix, such as the [OSRM table service](https://project-osrm.org/docs/v5.24.0/api/), can be cached to make repeated rankings fast.
+For each tract, estimate geographic travel time to the closest **verified, relevant** existing service and each candidate venue using coordinate distance. For the MVP, a tract representative point may be used; the interface labels travel-time estimates as approximate, especially for large rural tracts. A compatible routing source may replace this estimate when available; the method and its limits must be shown to planners.
 
 **Acceptance:** The user can inspect which existing service establishes each tract's baseline, and can exclude an incorrectly classified service.
 
@@ -151,7 +151,7 @@ Hard constraints cover host approval, accessibility, necessary facilities, date 
 
 ### FR-5: Rank feasible sites algorithmically
 
-Calculate a transparent, service-specific priority index, road-time access gain, and need-weighted coverage score. Exclude infeasible plans before ranking. For a multi-event plan, count each geographic unit's access gain once. Keep geographic population reached and event capacity separate from the score. The complete definitions, equations, and interpretation are in Section 8.
+Calculate a transparent, service-specific priority index, estimated access gain, and need-weighted coverage score. Exclude infeasible plans before ranking. For a multi-event plan, count each geographic unit's access gain once. Keep geographic population reached and event capacity separate from the score. The complete definitions, equations, and interpretation are in Section 8.
 
 **Acceptance:** Same inputs produce the same ranking; adding a second event does not double-count a tract; the score breakdown can be reproduced from exported inputs.
 
@@ -205,9 +205,9 @@ This section specifies every quantitative method used by the MVP. None of the sc
 | `j` | One candidate event: a venue, date/time, and fixed service |
 | `k` | An existing care site verified to offer that service to the target group |
 | `E_i` | Estimated number of residents eligible for the service in unit `i` |
-| `T` | Planner-selected maximum resident road travel time, in minutes |
-| `τ(i,j)` | Estimated road travel time from a representative point in unit `i` to event `j` |
-| `d_i^0` | Shortest road travel time from unit `i` to any verified existing relevant service |
+| `T` | Planner-selected maximum estimated travel time, in minutes |
+| `τ(i,j)` | Coordinate-derived estimated travel time from a representative point in unit `i` to event `j` |
+| `d_i^0` | Shortest estimated travel time from unit `i` to any listed existing relevant service |
 | `q_i` | Dimensionless, service-specific priority index between 0 and 1 |
 | `W_i` | `E_i × q_i`, a need-weighted population index, not a patient count |
 | `x_j` | Binary decision to schedule event `j` |
@@ -363,7 +363,7 @@ Any optional language-model summary must be generated from these structured fiel
 
 1. Prepare tract data and boundaries, then normalize indicators and join by tract ID.
 2. Maintain separate tables for `tracts`, `existing_services`, `candidate_venues`, `venue_verifications`, `resources`, `travel_times`, `runs`, and `run_results`.
-3. Cache road travel-time matrices from tracts to verified services and candidate venues.
+3. Use coordinate-derived travel estimates for the selected state; a compatible routing feed may replace these estimates when available.
 4. Apply hard constraints and score feasible single-site plans. For multiple events, use a maximum-coverage selection method or integer optimization.
 5. Run seeded robustness simulations and persist the inputs, scoring configuration, and results.
 6. Poll selected operational, weather, and road feeds; store dated snapshots and explain any material change.
