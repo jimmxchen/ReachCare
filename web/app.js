@@ -382,7 +382,7 @@ function renderDocs() {
 
   <h2 id="overview">Overview</h2>
   <p>Choose a state, then enter a hospital, driving radius, service, patient travel target, dates and clinic days. We score the available census tracts in that state and select public library sites that bring the most need within reach.</p>
-  <pre>inputs → need score per tract → tracts in hospital radius → drop tracts with existing access
+  <pre>inputs → need score per tract → tracts in hospital radius → halve the need of tracts within a mile of existing care
        → candidate host sites → greedy maximum-coverage pick → dates → robustness check</pre>
 
   <h2 id="data">Data</h2>

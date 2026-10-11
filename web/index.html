@@ -86,8 +86,8 @@
           <fieldset class="group">
             <legend>Existing care</legend>
             <label class="check opt"><input type="checkbox" name="use_existing_care" checked>
-              <span><b>Skip areas that already have a nearby clinic</b>
-              <small>An area counts as covered if a HRSA health center is within your patient travel target, based on coordinate distance estimates. Covered areas show gray on the map and don't count toward a new clinic's reach. Uncheck to treat every area as unserved.</small></span></label>
+              <span><b>Give less priority to areas that already have a nearby clinic</b>
+              <small>An area counts as having existing care if a HRSA health center is within about a mile of its center, which is walkable for households without a vehicle. Those areas count for half as much need and show gray on the map unless a new clinic reaches them. Uncheck to treat every area as unserved.</small></span></label>
           </fieldset>
 
           <div class="actions"><button type="submit" class="button primary" id="run"><span id="run-label">Find optimal clinic location</span></button></div>

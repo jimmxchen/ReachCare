@@ -292,6 +292,15 @@ class SitingTests(unittest.TestCase):
         locate.assert_called_once_with("Test Hospital", "NC")
         self.assertEqual(plan["hospital"]["address"], fake["address"])
 
+    def test_dense_existing_care_lowers_priority_but_still_returns_a_plan(self):
+        # Hundreds of health-center sites cover every NC tract at a 45-minute target; the plan must still come back.
+        on = self.app.site(self.params(travel_target=45, use_existing_care=True))
+        off = self.app.site(self.params(travel_target=45, use_existing_care=False))
+        self.assertTrue(on["clinics"])
+        self.assertGreater(on["summary"]["adults_in_reach_near_existing_care"], 0)
+        self.assertEqual(off["summary"]["adults_in_reach_near_existing_care"], 0)
+        self.assertEqual(on["summary"]["adults_newly_served"], sum(c["new_adults"] for c in on["clinics"]))
+
     def test_every_chronic_disease_service_can_be_planned(self):
         from planner.model import SERVICES
         self.assertEqual(len(SERVICES), 10)

@@ -18,6 +18,13 @@ EARTH_MILES = 3958.8
 RADII = (15, 30, 45, 60)
 WEIGHT_GRID = (0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8)
 MAX_CLINICS = 10
+# A nearby HRSA health center is not verified to offer the chosen service, so it lowers an area's priority
+# instead of removing the area. 0.5 means a tract near existing care counts half as much need.
+EXISTING_CARE_RESIDUAL_NEED = 0.5
+# "Existing care" means a health center within walking distance of the tract's center (about a mile), which is
+# what matters to households without a vehicle. The national directory is dense, so a drive-time test would
+# mark nearly every tract as supported.
+EXISTING_CARE_MILES = 1.0
 # Cost assumptions for one clinic day: clinical labor plus supplies, space and outreach.
 STAFF_HOURLY_COST = 55
 EVENT_FIXED_COST = 400
@@ -118,12 +125,12 @@ def site_clinics(state, routes, params):
         area_indices = np.flatnonzero(in_area)
         area_tracts = [tracts[i] for i in area_indices]
         care = [s for s in state["existing_services"] if s.get("lat") is not None and s.get("lon") is not None
-                and _haversine(p["lat"], p["lon"], np.array([s["lat"]]), np.array([s["lon"]]))[0] <= hospital_radius + target_radius]
+                and _haversine(p["lat"], p["lon"], np.array([s["lat"]]), np.array([s["lon"]]))[0] <= hospital_radius + EXISTING_CARE_MILES]
         nearest = np.full(len(area_tracts), np.inf)
         for start in range(0, len(care), 128):
             distances = travel_minutes_matrix(area_tracts, care[start:start + 128])
             nearest = np.minimum(nearest, distances.min(axis=1))
-        baseline[area_indices] = nearest <= p["travel_target"]
+        baseline[area_indices] = nearest <= EXISTING_CARE_MILES / MILES_PER_MINUTE
 
     candidates = [v for v in state["venue_directory"] if v.get("lat") is not None
                   and _haversine(p["lat"], p["lon"], np.array([v["lat"]]), np.array([v["lon"]]))[0] <= hospital_radius]
@@ -132,7 +139,8 @@ def site_clinics(state, routes, params):
     c_lat = np.array([v["lat"] for v in candidates])
     c_lon = np.array([v["lon"] for v in candidates])
     reach = np.array([_haversine(v["lat"], v["lon"], lats, lons) <= target_radius for v in candidates])
-    cover = reach & in_area & ~baseline
+    cover = reach & in_area
+    discount = np.where(baseline, EXISTING_CARE_RESIDUAL_NEED, 1.0)
     order = list(range(len(candidates)))
     order.sort(key=lambda i: candidates[i]["id"])
     rank = {i: r for r, i in enumerate(order)}
@@ -142,15 +150,15 @@ def site_clinics(state, routes, params):
     capacity = int(p["staff_count"] * p["clinical_hours"] * p["services_per_staff_hour"])
     limit = p["days"]
 
-    weight = pop * (p["health_weight"] * health + (1 - p["health_weight"]) * barrier)
+    weight = pop * (p["health_weight"] * health + (1 - p["health_weight"]) * barrier) * discount
     chosen = _greedy(cover, weight, limit, rank_list)
     if not chosen:
-        raise ValueError("Every tract in this area already has access within the travel target, or no host site reaches an unserved tract.")
+        raise ValueError("No library host site is within the patient travel target of any community in this area. Try a longer travel target or a larger driving radius.")
 
     # Robustness: how often each pick appears across the policy-weight range.
     frequency = {i: 0 for i in chosen}
     for w in WEIGHT_GRID:
-        alt = _greedy(cover, pop * (w * health + (1 - w) * barrier), limit, rank_list)
+        alt = _greedy(cover, pop * (w * health + (1 - w) * barrier) * discount, limit, rank_list)
         for i in alt:
             if i in frequency:
                 frequency[i] += 1
@@ -177,7 +185,7 @@ def site_clinics(state, routes, params):
     def community(j):
         t = tracts[j]
         return {"tract": t["id"], "county": t["county"], "adults": int(pop[j]), "indicator_pct": round(t["indicators"][service["indicator"]]["value"], 1),
-                "no_vehicle_pct": round(t["no_vehicle_pct"], 1), "priority": round(float(health[j] * p["health_weight"] + barrier[j] * (1 - p["health_weight"])), 2),
+                "no_vehicle_pct": round(t["no_vehicle_pct"], 1), "priority": round(float(health[j] * p["health_weight"] + barrier[j] * (1 - p["health_weight"])), 2), "near_existing_care": bool(baseline[j]),
                 "need_weight": round(float(weight[j]))}
     reached = np.flatnonzero(covered)
     left = np.flatnonzero(in_area & ~baseline & ~covered)
@@ -203,6 +211,7 @@ def site_clinics(state, routes, params):
             "tracts_in_area": int(in_area.sum()), "adults_in_area": int(total_pop),
             "adults_with_existing_access": int(pop[in_area & baseline].sum()),
             "adults_newly_served": int(pop[covered].sum()),
+            "adults_in_reach_near_existing_care": int(pop[covered & baseline].sum()),
             "adults_still_unserved": int(pop[in_area & ~baseline & ~covered].sum()),
             "share_of_need_addressed": round(float(weight[covered].sum() / total_weight), 3) if total_weight else 0,
             "candidate_sites": len(candidates), "estimated_cost": round(len(chosen) * cost), "days_requested": p["days"], "cost_per_clinic_day": round(cost),
