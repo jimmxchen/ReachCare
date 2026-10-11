@@ -207,6 +207,11 @@ def _auth_credentials():
 MESSAGING_PATHS = ("/api/signup", "/api/bot/")
 
 
+def _same_origin(origin, host):
+    scheme = "https" if os.environ.get("VERCEL") else "http"
+    return origin == f"{scheme}://{host}"
+
+
 class Handler(BaseHTTPRequestHandler):
     app: Application
 
@@ -310,7 +315,7 @@ class Handler(BaseHTTPRequestHandler):
             if length <= 0 or length > limit:
                 raise ValueError(f"Request must be JSON under {limit // 1000000} MB")
             origin = self.headers.get("Origin")
-            if origin and origin != "http://" + self.headers.get("Host", ""):
+            if origin and not _same_origin(origin, self.headers.get("Host", "")):
                 self.json_response({"error": "Cross-origin changes are disabled"}, 403)
                 return
             payload = json.loads(self.rfile.read(length))

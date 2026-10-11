@@ -16,9 +16,20 @@ from planner.feeds import refresh, weather_blocks
 from planner.model import baselines, coverage_matrix, default_config, greedy_schedule, normalize, run_plan, trend_multipliers, validate_config
 from planner.store import Store
 from scripts.reproduce import reproduce
-from server import Application
+from server import Application, _same_origin
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+class OriginTests(unittest.TestCase):
+    def test_same_origin_uses_https_on_vercel_and_http_locally(self):
+        with patch.dict("os.environ", {"VERCEL": "1"}):
+            self.assertTrue(_same_origin("https://reachcare.example", "reachcare.example"))
+            self.assertFalse(_same_origin("http://reachcare.example", "reachcare.example"))
+            self.assertFalse(_same_origin("https://other.example", "reachcare.example"))
+        with patch.dict("os.environ", {"VERCEL": ""}):
+            self.assertTrue(_same_origin("http://127.0.0.1:8000", "127.0.0.1:8000"))
+            self.assertFalse(_same_origin("https://127.0.0.1:8000", "127.0.0.1:8000"))
 
 
 def small_case():
