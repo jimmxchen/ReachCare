@@ -36,6 +36,21 @@ async function ask(body) {
 }
 
 const spaces = new Map(); // sender id -> space, so we can text people again while the bridge is running
+
+// iMessage can redeliver an event, so answer each inbound message once. Prefer the provider's message id;
+// otherwise treat the same sender repeating the same text within a few seconds as one message.
+const seen = new Map(); // key -> time first handled
+function alreadyHandled(message, sender, content) {
+  const now = Date.now();
+  for (const [k, t] of seen) if (now - t > 60_000) seen.delete(k);
+  const fingerprint = content.type === "text" ? `${sender}|${content.text}` : null;
+  const keys = [message.id ? `id:${message.id}` : null, fingerprint ? `fp:${fingerprint}` : null].filter(Boolean);
+  const window = (k) => (k.startsWith("id:") ? 60_000 : 5_000);
+  if (keys.some((k) => seen.has(k) && now - seen.get(k) < window(k))) return true;
+  keys.forEach((k) => seen.set(k, now));
+  return false;
+}
+const stamp = () => new Date().toISOString().slice(11, 23);
 const app = await Spectrum({ projectId, projectSecret, providers: [imessage.config()] });
 const im = imessage(app);
 console.log("ReachCare bot is listening for iMessages…");
@@ -44,6 +59,11 @@ for await (const [space, message] of app.messages) {
   const content = message.content;
   const sender = normalizeId(message.sender?.id);
   if (sender) spaces.set(sender, space);
+  if (alreadyHandled(message, sender, content)) {
+    console.log(`${stamp()} [${sender}] duplicate delivery ignored (id ${message.id ?? "none"})`);
+    continue;
+  }
+  console.log(`${stamp()} [${sender}] received ${content.type} (id ${message.id ?? "none"})`);
   try {
     let reply;
     if (content.type === "text") {
@@ -62,7 +82,7 @@ for await (const [space, message] of app.messages) {
     } else {
       await space.send(reply.reply);
     }
-    console.log(`[${message.sender?.id ?? "unknown"}] ${reply.mode} (${reply.language}) → replied`);
+    console.log(`${stamp()} [${message.sender?.id ?? "unknown"}] ${reply.mode} (${reply.language}) → replied`);
   } catch (err) {
     console.error("Could not answer:", err.message);
     await space.send("Sorry, I couldn't look that up right now. Please try again in a moment.");
