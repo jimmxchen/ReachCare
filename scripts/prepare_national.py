@@ -25,7 +25,8 @@ PLACES_URL = "https://data.cdc.gov/resource/yjkw-uj5s.json"
 ACS_URL = "https://www2.census.gov/programs-surveys/acs/summary_file/2024/table-based-SF/data/5YRData/"
 HRSA_URL = "https://gisportal.hrsa.gov/server/rest/services/HealthCareFacilities/PrimaryHealthCareFacilities_FS/MapServer/0/query"
 FIELDS = ["stateabbr", "countyname", "countyfips", "tractfips", "geolocation"]
-for indicator in ("bphigh", "diabetes", "copd", "casthma"):
+INDICATORS = ("bphigh", "diabetes", "copd", "casthma", "obesity", "highchol", "chd", "stroke", "arthritis", "depression")
+for indicator in INDICATORS:
     FIELDS.extend([f"{indicator}_crudeprev", f"{indicator}_crude95ci"])
 
 
@@ -182,7 +183,7 @@ def build():
             issues.append({"tract_id": tract_id, "issue": "Missing representative point"})
             continue
         indicators = {}
-        for indicator in ("bphigh", "diabetes", "copd", "casthma"):
+        for indicator in INDICATORS:
             import re
             ci = re.findall(r"[\d.]+", row.get(f"{indicator}_crude95ci") or "")
             indicators[indicator] = {"value": number(row.get(f"{indicator}_crudeprev")),

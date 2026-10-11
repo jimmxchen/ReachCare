@@ -12,7 +12,10 @@ from planner.model import run_plan
 
 def reproduce(export):
     snapshot = export["reproduction_inputs"]
-    fresh = run_plan(snapshot["state"], np.array(snapshot["road_times_minutes"], dtype=float), snapshot["config"], snapshot["operations"], snapshot["observations"], snapshot.get("weather_blocks"))
+    # Coordinate-derived runs store no road-time matrix; the model recomputes straight-line times.
+    times = snapshot.get("road_times_minutes")
+    times = None if times is None else np.array(times, dtype=float)
+    fresh = run_plan(snapshot["state"], times, snapshot["config"], snapshot["operations"], snapshot["observations"], snapshot.get("weather_blocks"))
     fields = ["score", "rank", "score_components", "newly_covered_tracts", "approx_population_in_newly_covered_tracts", "event_capacity", "top_n_frequency", "first_frequency", "median_rank", "average_regret", "worst_case_regret"]
     def metrics(run):
         return [{"site_id": r["site"]["id"], **{k: r[k] for k in fields}} for r in run["recommendations"]]

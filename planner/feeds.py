@@ -5,12 +5,27 @@ import json
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from .catalog import STATE_NAMES
 
 FEEDS = {
     "nws-alerts": {"url": "https://api.weather.gov/alerts/active", "title": "National Weather Service active alerts", "ttl": 900},
 }
 STATE_FIPS = dict(zip(STATE_NAMES, "01 02 04 05 06 08 09 10 11 12 13 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 44 45 46 47 48 49 50 51 53 54 55 56".split()))
+# Principal time zone per state; alert timestamps in UTC are converted to the venue's local calendar day.
+_EASTERN = "CT DE DC FL GA IN KY ME MD MA MI NH NJ NY NC OH PA RI SC VT VA WV".split()
+_CENTRAL = "AL AR IL IA KS LA MN MS MO NE ND OK SD TN TX WI".split()
+_MOUNTAIN = "CO ID MT NM UT WY".split()
+_PACIFIC = "CA NV OR WA".split()
+STATE_TZ = {**dict.fromkeys(_EASTERN, "America/New_York"), **dict.fromkeys(_CENTRAL, "America/Chicago"),
+            **dict.fromkeys(_MOUNTAIN, "America/Denver"), **dict.fromkeys(_PACIFIC, "America/Los_Angeles"),
+            "AZ": "America/Phoenix", "AK": "America/Anchorage", "HI": "Pacific/Honolulu"}
+_FIPS_STATE = {fips: abbr for abbr, fips in STATE_FIPS.items()}
+
+
+def venue_zone(venue):
+    state = venue.get("state") or _FIPS_STATE.get(str(venue.get("county_id", ""))[:2], "")
+    return ZoneInfo(STATE_TZ.get(state, "America/New_York"))
 
 
 def get_json(url):
@@ -77,14 +92,15 @@ def weather_blocks(venues, signals, config):
         try:
             onset = datetime.fromisoformat(alert.get("onset") or alert["effective"])
             end = datetime.fromisoformat(alert.get("ends") or alert["expires"])
-            # County warnings conservatively cover each intersecting local calendar day.
-            start_date = onset.date()
-            end_date = end.date()
         except (KeyError, TypeError, ValueError):
             continue
         for venue in venues:
             if venue.get("county_id") not in counties:
                 continue
+            zone = venue_zone(venue)
+            # County warnings conservatively cover each intersecting local calendar day.
+            start_date = (onset.astimezone(zone) if onset.tzinfo else onset.replace(tzinfo=zone)).date()
+            end_date = (end.astimezone(zone) if end.tzinfo else end.replace(tzinfo=zone)).date()
             dates = []
             current = max(start_date, date.fromisoformat(config.get("date_start", date.today().isoformat())))
             last = min(end_date, date.fromisoformat(config.get("date_end", date.today().isoformat())))

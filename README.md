@@ -10,7 +10,7 @@ A hospital selects a state, enters where it is and what it can run. ReachCare re
 - **Ask:** a Gemini-powered chat explains why communities were prioritized and explores trade-offs between travel time, coverage and resources.
 - **Alert:** residents sign up on a web page to be texted when a free clinic is scheduled nearby.
 - **Text or talk:** residents text or send a voice note in any language. Text gets a text reply, and a voice note gets a voice reply in the same language.
-- **Services:** blood-pressure, diabetes, and COPD/lung screening, plus asthma education and support.
+- **Services:** a chronic-disease theme covering ten leading conditions: blood pressure, diabetes, obesity, cholesterol, heart disease, stroke, COPD, asthma, arthritis and depression.
 
 ## How the recommendation works
 

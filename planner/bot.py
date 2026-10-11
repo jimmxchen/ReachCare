@@ -26,7 +26,13 @@ SPANISH_TEXT = re.compile(r"[¿¡]|\b(?:cuándo|dónde|clínica|clínicas|presi�
 KEYWORDS = {"blood-pressure": ["blood pressure", "hypertension", "presión", "presion", "tension"],
             "diabetes": ["diabet", "sugar", "glucose", "azúcar", "azucar"],
             "copd": ["copd", "lung", "breath", "pulmon", "pulmón"],
-            "asthma": ["asthma", "asma"]}
+            "asthma": ["asthma", "asma"],
+            "obesity": ["obes", "weight", "nutrition", "peso", "nutrici"],
+            "highchol": ["cholesterol", "colesterol", "lipid"],
+            "chd": ["heart", "cardiac", "coronary", "corazón", "corazon", "cardio"],
+            "stroke": ["stroke", "derrame", "ictus"],
+            "arthritis": ["arthritis", "artritis", "joint", "mobility"],
+            "depression": ["depress", "mental health", "depresión", "depresion", "anxiety", "mood"]}
 
 
 def _miles(lat1, lon1, lat2, lon2):
@@ -134,12 +140,14 @@ def compose(f, language):
 
 PERSONA = (
     "You are ReachCare, a friendly assistant that helps North Carolinians find FREE community health clinics "
-    "(blood-pressure, diabetes, and COPD/lung screenings, plus asthma education and support) hosted by local hospitals. "
+    "(screenings and support for blood pressure, diabetes, obesity, cholesterol, heart disease, stroke, COPD, asthma, arthritis "
+    "and depression) hosted by local hospitals. "
     "You are not a doctor and never give medical advice."
 )
 GREETINGS = {"hi", "hello", "hey", "yo", "sup", "hola", "hii", "heya", "howdy", "yo!", "hi!", "hello!", "hey!", "start", "help", "?"}
 STOP_WORDS = {"stop", "unsubscribe", "cancel", "quit", "end", "alto", "parar"}
-SERVICE_LIST = "blood pressure, diabetes, lung health (COPD), asthma education and support"
+SERVICE_LIST = ("blood pressure, diabetes, weight and nutrition, cholesterol, heart health, stroke risk, lung health (COPD), "
+                "asthma, arthritis, depression")
 PROMPTS = {
     "name": "What's your name?",
     "place": "What city or ZIP code are you in? I'll use it to find clinics near you.",
@@ -380,7 +388,7 @@ def converse(plans, store, sender, text, language_hint=None, preview=False):
         return finish(f"Hi {profile['name']}! Ask me about the next {'proposed ' if preview else 'free '}clinic near {profile['place']}, "
                       "or reply UPDATE to change your info.")
     reply, match, localized = _clinic_answer(plans, profile, parsed, text, preview, language)
-    if intent == "other" and match is not None and not any(w in text.lower() for w in ("clinic", "screen", "blood", "diabet", "asthma", "copd")):
+    if intent == "other" and match is not None and not any(w in text.lower() for w in ("clinic", "screen", "blood", "diabet", "asthma", "copd", "heart", "cholesterol", "obes", "stroke", "arthritis", "depress")):
         return finish("I can help you find free clinics. Try \"when is the next clinic near me?\" or reply HELP.")
     return finish(reply, localized)
 

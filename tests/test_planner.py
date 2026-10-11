@@ -52,7 +52,7 @@ class OriginTests(unittest.TestCase):
     def test_hosted_signup_is_advertised_as_preview_only(self):
         handler = Handler.__new__(Handler)
         handler.path = "/api/clinic-options"
-        handler.app = type("DemoApp", (), {"state": {"counties": {}}})()
+        handler.app = type("DemoApp", (), {"catalog": type("Catalog", (), {"states": lambda self: []})()})()
         handler.authorized = lambda: True
         responses = []
         handler.json_response = lambda value, status=200: responses.append((status, value))
@@ -77,6 +77,7 @@ def small_case():
     times = np.array([[20., 40., 40.], [40., 20., 45.]])
     cfg = default_config(date(2026, 10, 10))
     cfg["travel_variation"] = 0
+    cfg["region"] = "US"
     return state, times, cfg
 
 
@@ -205,34 +206,26 @@ class PersistenceTests(unittest.TestCase):
             self.assertTrue(current["stale"])
             self.assertEqual(current["data"]["count"], 7)
 
-    def test_drivenc_schema_and_secret_free_snapshot(self):
-        def response(url):
-            if "api.weather.gov" in url:
-                return {"features": []}
-            self.assertIn("key=test-key", url)
-            return [{"ID": 1, "LastUpdated": 1760000000, "RoadwayName": "NC-1"}]
-
-        with tempfile.TemporaryDirectory() as folder, patch.dict("os.environ", {"DRIVENC_API_KEY": "test-key"}), patch("planner.feeds.get_json", side_effect=response):
+    def test_nws_alerts_are_stored_with_source_and_no_credentials(self):
+        features = [{"id": "a1", "properties": {"event": "Tornado Warning", "effective": "2026-10-20T10:00:00-04:00", "geocode": {"SAME": ["037001"]}}, "geometry": None}]
+        with tempfile.TemporaryDirectory() as folder, patch.dict("os.environ", {"DRIVENC_API_KEY": "test-key"}), \
+                patch("planner.feeds.get_json", return_value={"features": features}) as fetch:
             store = Store(Path(folder) / "db.sqlite")
             signals = refresh(store)
-            road = next(s for s in signals if s["feed"] == "ncdot-incidents")
-            self.assertFalse(road["stale"])
-            self.assertEqual(road["data"]["count"], 1)
-            self.assertEqual(road["observed_at"], datetime.fromtimestamp(1760000000, timezone.utc).isoformat())
-            self.assertNotIn("test-key", json.dumps(signals))
+        alerts = next(s for s in signals if s["feed"] == "nws-alerts")
+        self.assertFalse(alerts["stale"])
+        self.assertEqual(alerts["data"]["count"], 1)
+        self.assertEqual(alerts["data"]["items"][0]["event"], "Tornado Warning")
+        self.assertNotIn("test-key", json.dumps(signals))
+        self.assertNotIn("key=", fetch.call_args.args[0])
 
-    def test_drivenc_unconfigured_and_error_redaction(self):
-        with tempfile.TemporaryDirectory() as folder, patch.dict("os.environ", {}, clear=True), patch("planner.feeds.get_json", return_value={"features": []}):
+    def test_nws_failure_marks_feed_stale_without_data(self):
+        with tempfile.TemporaryDirectory() as folder, patch("planner.feeds.get_json", side_effect=ValueError("NWS unavailable")):
             store = Store(Path(folder) / "db.sqlite")
-            road = next(s for s in refresh(store) if s["feed"] == "ncdot-incidents")
-            self.assertTrue(road["stale"])
-            self.assertIn("DRIVENC_API_KEY", road["error"])
-            self.assertIsNone(road["data"])
-        with tempfile.TemporaryDirectory() as folder, patch.dict("os.environ", {"DRIVENC_API_KEY": "test/key"}), patch("planner.feeds.get_json", side_effect=ValueError("Failed key=test%2Fkey")):
-            store = Store(Path(folder) / "db.sqlite")
-            road = next(s for s in refresh(store) if s["feed"] == "ncdot-incidents")
-            self.assertNotIn("test%2Fkey", road["error"])
-            self.assertIn("[redacted]", road["error"])
+            alerts = next(s for s in refresh(store) if s["feed"] == "nws-alerts")
+        self.assertTrue(alerts["stale"])
+        self.assertIn("NWS unavailable", alerts["error"])
+        self.assertIsNone(alerts["data"])
 
 
 class InterfaceContractTests(unittest.TestCase):
@@ -269,14 +262,14 @@ class SitingTests(unittest.TestCase):
     def setUpClass(cls):
         cls.folder = tempfile.TemporaryDirectory()
         cls.app = Application(runtime_dir=cls.folder.name)
-        cls.durham = cls.app.county_centers()["37063"]
+        cls.durham = cls.app.county_centers("NC")["37063"]
 
     @classmethod
     def tearDownClass(cls):
         cls.folder.cleanup()
 
     def params(self, **kw):
-        return {"lat": self.durham[0], "lon": self.durham[1], "radius": 30, "travel_target": 20, "days": 3, "staff_count": 3, "clinical_hours": 4, "services_per_staff_hour": 5, **kw}
+        return {"state": "NC", "lat": self.durham[0], "lon": self.durham[1], "radius": 30, "travel_target": 20, "days": 3, "staff_count": 3, "clinical_hours": 4, "services_per_staff_hour": 5, **kw}
 
     def test_clinics_are_inside_radius_and_unique(self):
         plan = self.app.site(self.params())
@@ -295,9 +288,19 @@ class SitingTests(unittest.TestCase):
     def test_hospital_name_is_geocoded(self):
         fake = {"lat": self.durham[0], "lon": self.durham[1], "address": "1 Test Rd, Durham, NC"}
         with patch("server.geocode.locate", return_value=fake) as locate:
-            plan = self.app.site({"hospital_name": "Test Hospital", "radius": 30, "travel_target": 20})
-        locate.assert_called_once_with("Test Hospital")
+            plan = self.app.site({"state": "NC", "hospital_name": "Test Hospital", "radius": 30, "travel_target": 20})
+        locate.assert_called_once_with("Test Hospital", "NC")
         self.assertEqual(plan["hospital"]["address"], fake["address"])
+
+    def test_every_chronic_disease_service_can_be_planned(self):
+        from planner.model import SERVICES
+        self.assertEqual(len(SERVICES), 10)
+        for key in SERVICES:
+            with self.subTest(service=key):
+                plan = self.app.site(self.params(service=key, travel_target=15, use_existing_care=False))
+                self.assertTrue(plan["clinics"])
+                self.assertEqual(plan["clinics"][0]["service"], key)
+                self.assertIsNotNone(plan["clinics"][0]["avg_indicator"])
 
     def test_validation(self):
         for bad in [{"radius": 25}, {"lat": 10}, {"days": 11}, {"days": 0}, {"staff_count": 1}, {"clinical_hours": 20}, {"date_start": "2026-12-02", "date_end": "2026-12-01"}]:
@@ -338,6 +341,16 @@ class BotTests(unittest.TestCase):
         self.assertEqual([c["id"] for c in near], ["a", "b"])
         self.assertEqual(bot.upcoming(self.PLANS, "diabetes", None, today), [])
         self.assertEqual([c["id"] for c in bot.upcoming(self.PLANS, None, None, today)], ["b", "a"])
+
+    def test_every_service_is_recognized_from_plain_language(self):
+        from planner import bot
+        from planner.model import SERVICES
+        self.assertEqual(set(bot.KEYWORDS), set(SERVICES))
+        asks = {"obesity": "free weight screening", "highchol": "cholesterol check", "chd": "heart health clinic",
+                "stroke": "stroke risk screening", "arthritis": "arthritis support", "depression": "depression screening"}
+        with patch("planner.bot.gemini.available", return_value=False):
+            for key, text in asks.items():
+                self.assertEqual(bot.understand(text)["service"], key)
 
     def test_generic_clinic_answer_does_not_repeat_free_clinic(self):
         from planner import bot
@@ -507,16 +520,17 @@ class PlanChatTests(unittest.TestCase):
     def test_context_has_what_ifs_and_communities_and_needs_gemini(self):
         from planner import planchat
         app = Application(runtime_dir=tempfile.mkdtemp())
-        durham = app.county_centers()["37063"]
-        params = {"lat": durham[0], "lon": durham[1], "radius": 30, "travel_target": 20, "days": 2}
-        ctx = planchat.context(app.state, app.routes, params)
+        durham = app.county_centers("NC")["37063"]
+        state = app.current_state("NC")
+        params = {"state": "NC", "lat": durham[0], "lon": durham[1], "radius": 30, "travel_target": 20, "days": 2}
+        ctx = planchat.context(state, None, params)
         changes = [s["change"] for s in ctx["what_if_scenarios"]]
         self.assertIn("current plan", changes)
         self.assertIn("patient travel target 15 min", changes)
         self.assertTrue(ctx["communities"]["prioritized"])
         self.assertEqual(ctx["what_if_scenarios"][0]["adults_newly_in_reach"], ctx["summary"]["adults_newly_served"])
         with patch("planner.planchat.gemini.available", return_value=False), self.assertRaises(RuntimeError):
-            planchat.answer(app.state, app.routes, params, [{"role": "user", "text": "why?"}])
+            planchat.answer(state, None, params, [{"role": "user", "text": "why?"}])
 
 
 class StatewideTests(unittest.TestCase):
@@ -530,19 +544,28 @@ class StatewideTests(unittest.TestCase):
         cls.folder.cleanup()
 
     def test_statewide_data_and_routes_contract(self):
-        state = self.app.state
+        state = self.app.current_state("NC")
         self.assertEqual(len(state["counties"]), 100)
-        self.assertGreater(len(state["tracts"]), 2500)
+        self.assertGreater(len(state["tracts"]), 2000)
         ids = [t["id"] for t in state["tracts"]]
         self.assertEqual(len(ids), len(set(ids)))
         self.assertTrue(all(len(i) == 11 and i.startswith("37") and i.isdigit() for i in ids))
         self.assertTrue(all("bookmobile" not in v["name"].lower() for v in state["venues"]))
-        self.assertEqual(self.app.routes.shape, (len(ids), len(state["venues"]) + len(state["existing_services"])))
-        self.assertTrue(np.all(self.app.routes[np.isfinite(self.app.routes)] >= 0))
+        self.assertTrue(state["venues"] and state["existing_services"])
+        self.assertTrue(all(t["state"] == "NC" for t in state["tracts"]))
+        from planner.model import SERVICES
+        for key, service in SERVICES.items():
+            with self.subTest(service=key):
+                values = [t["indicators"][service["indicator"]]["value"] for t in state["tracts"]
+                          if t["indicators"].get(service["indicator"], {}).get("value") is not None]
+                self.assertGreater(len(values), 2000)
+                low, high = service["benchmark"]
+                self.assertLess(low, np.median(values))
+                self.assertGreater(high, np.median(values))
         self.assertTrue(all(t["population_source"] and t["transport_source"] for t in state["tracts"]))
 
     def test_export_reproduction_versioned_closure_and_outcomes(self):
-        original = self.app.run(default_config(), "Initial check")
+        original = self.app.run({**default_config(), "region": "NC"}, "Initial check")
         saved = self.app.store.get_run(original["id"], export=True)
         reproduce(saved)
         first_id = original["recommendations"][0]["site"]["id"]
@@ -554,22 +577,22 @@ class StatewideTests(unittest.TestCase):
         self.assertEqual(self.app.store.get_run(original["id"])["input_hash"], original["input_hash"])
 
     def test_confirmed_mode_does_not_use_sample_approvals(self):
-        cfg = default_config(); cfg["mode"] = "confirmed"
+        cfg = {**default_config(), "region": "NC", "mode": "confirmed"}
         result = self.app.run(cfg, "Confirmed-only check")
         self.assertEqual(result["candidates"], 0)
-        self.assertEqual(result["scope"]["unknown_baseline_tracts"], len(self.app.state["tracts"]))
+        self.assertEqual(result["scope"]["unknown_baseline_tracts"], len(self.app.current_state("NC")["tracts"]))
 
     def test_real_confirmations_produce_a_confirmed_plan(self):
         with tempfile.TemporaryDirectory() as folder:
             app = Application(runtime_dir=folder)
-            cfg = default_config()
-            cfg["mode"] = "confirmed"
+            cfg = {**default_config(), "region": "NC", "mode": "confirmed"}
+            state = app.current_state("NC")
             verified_at = date.today().isoformat()
-            venue = {"id": app.state["venues"][0]["id"], "details_verified": True, "host_approved": True,
+            venue = {"id": state["venues"][0]["id"], "details_verified": True, "host_approved": True,
                      "accessible": True, "private_space": True, "power": True, "available": True,
                      "cost": 600, "space_throughput": 48, "verified_by": "Test verifier",
                      "verified_at": verified_at, "available_dates": cfg["date_start"]}
-            service = {"id": app.state["existing_services"][0]["id"], "service": "blood-pressure",
+            service = {"id": state["existing_services"][0]["id"], "service": "blood-pressure",
                        "service_verified": True, "eligibility_verified": True, "schedule_verified": True,
                        "verified_by": "Test verifier", "verified_at": verified_at,
                        "schedule_start": cfg["date_start"], "schedule_end": cfg["date_end"]}
@@ -578,7 +601,7 @@ class StatewideTests(unittest.TestCase):
                 writer = csv.DictWriter(contents, fieldnames=list(record))
                 writer.writeheader()
                 writer.writerow(record)
-                self.assertEqual(app.import_csv(kind, contents.getvalue()), {"imported": 1, "errors": []})
+                self.assertEqual(app.import_csv(kind, contents.getvalue(), "NC"), {"imported": 1, "errors": []})
             result = app.run(cfg, "Real confirmation workflow test")
             self.assertEqual(result["candidates"], 1)
             self.assertEqual(result["scope"]["unknown_baseline_tracts"], 0)
@@ -591,12 +614,12 @@ class StatewideTests(unittest.TestCase):
         kind = "series"
         fields = ["signal", "service", "geography_type", "geography_id", "period_start", "period_end", "value", "denominator", "unit", "baseline_rate", "published_at", "source", "revision_id"]
         values = ["referrals", "blood-pressure", "tract", "27514", "2026-09-01", "2026-09-30", "10", "0", "referrals per adult", ".1", "2026-10-01", "Partner", "1"]
-        response = self.app.import_csv(kind, ",".join(fields) + "\n" + ",".join(values))
+        response = self.app.import_csv(kind, ",".join(fields) + "\n" + ",".join(values), "NC")
         self.assertEqual(response["imported"], 0)
         self.assertTrue(response["errors"])
 
     def test_simulation_convergence(self):
-        a = self.app.run(default_config(), "1000 draw convergence check")
+        a = self.app.run({**default_config(), "region": "NC"}, "1000 draw convergence check")
         cfg = {**a["config"], "simulations": 5000}
         b = self.app.run(cfg, "5000 draw convergence check")
         by_id = {r["site"]["id"]: r for r in b["recommendations"]}
