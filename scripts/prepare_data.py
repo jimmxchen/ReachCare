@@ -62,7 +62,7 @@ def acs_table(table):
     return {row["GEO_ID"].split("US")[1]: row for row in csv.DictReader(io.StringIO(raw.decode()), delimiter="|")}
 
 
-def shape_features(raw):
+def shape_features(raw, state_fips="37"):
     """Read Census polygon SHP and DBF without a GIS dependency."""
     archive = zipfile.ZipFile(io.BytesIO(raw))
     dbf = archive.read(next(n for n in archive.namelist() if n.endswith(".dbf")))
@@ -88,7 +88,7 @@ def shape_features(raw):
         length = struct.unpack_from(">I", shp, offset + 4)[0] * 2
         content = shp[offset + 8:offset + 8 + length]
         offset += length + 8
-        if row.get("STATEFP") != "37" or len(content) < 44:
+        if row.get("STATEFP") != state_fips or len(content) < 44:
             continue
         parts, points = struct.unpack_from("<II", content, 36)
         starts = list(struct.unpack_from(f"<{parts}I", content, 44)) + [points]

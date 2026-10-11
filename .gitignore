@@ -5,6 +5,12 @@ __pycache__/
 .runtime/
 data/snapshots/*.zip
 data/snapshots/routes/
+data/snapshots/places-2025-*.json
+data/snapshots/hrsa-sites-*.json
+data/snapshots/acs-2024-*-us-tract.dat
+data/geography-??.json
+data/us.json
+data/us.sqlite3
 
 .env
 bot/node_modules/

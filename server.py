@@ -23,6 +23,7 @@ import numpy as np
 
 from planner.subscribers import Subscribers
 from planner import bot, planchat, feeds, gemini, geocode, siting
+from planner.catalog import NationalCatalog
 from planner.model import SERVICES, MODEL_VERSION, default_config, demo_operations, input_hash, run_plan
 from planner.store import Store
 
@@ -41,6 +42,7 @@ class Application:
         if list(archive["tract_ids"]) != [t["id"] for t in self.state["tracts"]] or list(archive["site_ids"]) != [s["id"] for s in self.state["venues"] + self.state["existing_services"]]:
             raise ValueError("Routing IDs do not align with the dataset. Rebuild the matrix.")
         self.store = Store(Path(runtime_dir or ROOT / ".runtime") / "planner.sqlite3")
+        self.catalog = NationalCatalog(data_dir / "us.sqlite3.gz", Path(runtime_dir or ROOT / ".runtime")) if (data_dir / "us.sqlite3.gz").is_file() else None
         self.store.seed(self.state, self.routing)
         self.subscribers = Subscribers(Path(runtime_dir or ROOT / ".runtime") / "subscribers.json")
         self.signup_times = []
@@ -277,6 +279,14 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if path == "/api/bootstrap":
                 self.json_response(self.app.bootstrap())
+            elif path == "/api/catalog/states" and self.app.catalog:
+                self.json_response(self.app.catalog.states())
+            elif path in {"/api/catalog/tracts", "/api/catalog/libraries", "/api/catalog/health-centers"} and self.app.catalog:
+                q = parse_qs(url.query)
+                table = {"/api/catalog/tracts": "tracts", "/api/catalog/libraries": "libraries", "/api/catalog/health-centers": "health_centers"}[path]
+                self.json_response(self.app.catalog.records(table, q.get("state", [""])[0], int(q.get("limit", [1000])[0]), int(q.get("offset", [0])[0])))
+            elif path == "/api/catalog/geography" and self.app.catalog:
+                self.json_response(self.app.catalog.geography(parse_qs(url.query).get("state", [""])[0]))
             elif path == "/api/runs":
                 self.json_response(self.app.store.list_runs())
             elif path.startswith("/api/runs/"):

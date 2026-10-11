@@ -1,0 +1,257 @@
+{
+  "cb_2023_05_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_05_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:33.343532+00:00",
+    "sha256": "0ebd184f9683172516f3e152ba5bf7e66f4f8afbe95c42f14754c32931ef7904"
+  },
+  "cb_2023_08_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_08_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:33.510777+00:00",
+    "sha256": "48201c922833f70ec39948a271b2c56f663ed18a7280c4be22b458d3018559c3"
+  },
+  "cb_2023_04_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_04_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:33.523601+00:00",
+    "sha256": "ab22caaf8a8b7a26ee0cceddf1ccc7733e26740a6705115517a28a59908e7ee7"
+  },
+  "cb_2023_09_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_09_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:33.880187+00:00",
+    "sha256": "8b4fb75c577f620d0fc4fdf9ca51c60245670f0f3fe46e8961911c0e2c69687d"
+  },
+  "cb_2023_01_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_01_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:33.873199+00:00",
+    "sha256": "f1888d5c64a98e3bbb54ab5f87e0fc040e27f63b1ab8377e1b3b76b248b4841f"
+  },
+  "cb_2023_02_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_02_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:33.865829+00:00",
+    "sha256": "74b2fb5846c187967ab3b8bba80ba58d0c944589885901f1fbac9b0d2f20dea3"
+  },
+  "cb_2023_11_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_11_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:34.389850+00:00",
+    "sha256": "d410e86d168030191edf44d22d5ba0d9cd89cc723c652740bb36bf5e174aeeb6"
+  },
+  "cb_2023_10_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_10_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:34.389713+00:00",
+    "sha256": "b5a742f5c1f81c581e8468990ba8015fd7159be8439f94521179e6c3723b85ab"
+  },
+  "cb_2023_15_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_15_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:34.613450+00:00",
+    "sha256": "39693c867ee8f0c7a19750d90eb779a2f78902bbcae77b20dbb2965ad9882580"
+  },
+  "cb_2023_16_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_16_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:34.857140+00:00",
+    "sha256": "bdd6c29dc0b2b56965420b3016c6877f91d9ddf99fcc796467390d9da38ef300"
+  },
+  "cb_2023_06_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_06_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:34.950893+00:00",
+    "sha256": "63afe6f8a9a10cee22dd8b2d9950b676909e9e9a0b3bd58703ea4fe9ee2107c4"
+  },
+  "cb_2023_18_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_18_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:35.187687+00:00",
+    "sha256": "87e3274e5c4ef94f2374a7853645d33c4361d2bad64763ea6de3ce5d3feb4bac"
+  },
+  "cb_2023_17_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_17_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:35.290565+00:00",
+    "sha256": "90bb0d3b2b0c9431f8827e7e31fb64e6abb546d83e8273ecaa450fc69f8eb640"
+  },
+  "cb_2023_13_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_13_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:35.225393+00:00",
+    "sha256": "972618262f8defa7a95331a86d2518ddd027aeec03da9600c60ef42afbee7b9f"
+  },
+  "cb_2023_12_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_12_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:35.315751+00:00",
+    "sha256": "a50759de4520f21c6e5418d37e3f8439c4b48f346a0faf75a8b499a1e8fae0ad"
+  },
+  "cb_2023_20_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_20_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:36.568661+00:00",
+    "sha256": "980b5be4779554f81a34a910da529cd4119e1a19022a0514f0d62e514090a93c"
+  },
+  "cb_2023_19_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_19_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:36.567260+00:00",
+    "sha256": "50b142ef0680808aa94fd53aad028eebafd98176e663e7d226e186ab66bed430"
+  },
+  "cb_2023_21_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_21_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:36.854862+00:00",
+    "sha256": "0bc02798e00a94fee3b08d074d9c45b4ff5e3bd2e6e4872dd49ff83b729676cd"
+  },
+  "cb_2023_23_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_23_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:37.067670+00:00",
+    "sha256": "de2ba32f026a0847df1ffd3ec4549ac467a79b6789876ca4358bcd8bfd7079ab"
+  },
+  "cb_2023_24_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_24_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:37.070686+00:00",
+    "sha256": "3de526ed3dac854e9aef543172a8eb7a1bd4fe22bb85ef60becaa0ba0d80459e"
+  },
+  "cb_2023_22_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_22_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:37.069196+00:00",
+    "sha256": "0dc604ca8d626d79e023ecbdaeddb0ae2ebbcdfd2204a5fd6b5658d68da350e5"
+  },
+  "cb_2023_25_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_25_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:37.391459+00:00",
+    "sha256": "5c35a1200fd2c8cdc96f577b37d23e78ffb5615a0100b28ec770ab68deea3e59"
+  },
+  "cb_2023_26_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_26_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:37.391637+00:00",
+    "sha256": "0723f5f7fe06c1294e040e4e3643a761f0d026e2c8695467648d347ae52f3197"
+  },
+  "cb_2023_27_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_27_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:37.518877+00:00",
+    "sha256": "ce1cd69906b3637911d477e5b962f49fa38d63190f68fafe803451298cc622ec"
+  },
+  "cb_2023_28_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_28_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:37.704427+00:00",
+    "sha256": "37738ac3fdb6d19fc1e65c55c60ae2c73914215fd5d8d68fb78e9be6f1890033"
+  },
+  "cb_2023_29_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_29_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:37.774266+00:00",
+    "sha256": "1dfda42013de056fbce2d5edf9529276243e7f34adee133ae32bc4f4742e1d82"
+  },
+  "cb_2023_33_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_33_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:38.079096+00:00",
+    "sha256": "d18805873db699914daae9e61a2f42511d72682bf1e877e42fcd2f0c2fe3a028"
+  },
+  "cb_2023_31_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_31_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:38.078878+00:00",
+    "sha256": "20d06d786ef2320d618df204db388e7132453ad50875cdd1b1dbb5d68e108789"
+  },
+  "cb_2023_32_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_32_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:38.079148+00:00",
+    "sha256": "8681b2748d03f2662fc7ade1152c4502dc2ccb19c8353630f48af06e45b62e56"
+  },
+  "cb_2023_30_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_30_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:38.202691+00:00",
+    "sha256": "cd6e93a98526520cfc3ce65e47a5ef45322c2c55157307a45a851b12899c110d"
+  },
+  "cb_2023_37_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_37_tract_500k.zip",
+    "retrieved_at": "2026-10-10T16:34:46.448169+00:00",
+    "sha256": "b74ce3f4751a1e298210d20345f7810b360f5ba1198405aa9b31cbccd9404036"
+  },
+  "cb_2023_38_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_38_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:38.619904+00:00",
+    "sha256": "bf551daed0b889c5b98b8d1fa1c057532619ec710de59b2c17c0bebac016b4ba"
+  },
+  "cb_2023_35_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_35_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:38.620209+00:00",
+    "sha256": "72ecaec17e870c20c059c6d873508cbb1e81fe35899d5aa59776a2db0bc809c2"
+  },
+  "cb_2023_34_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_34_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:38.749165+00:00",
+    "sha256": "f0fd098c8dba420a695d06337eacdcd8cacfee44ee8d655b546df77921b298c4"
+  },
+  "cb_2023_36_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_36_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:38.759246+00:00",
+    "sha256": "ac3f78497406bef3aa471023d8fada80d9a3661782ac743f493d08dd7196dae7"
+  },
+  "cb_2023_40_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_40_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:39.115785+00:00",
+    "sha256": "036adda75b6f6b6c93d51e445b2f82c309d76cf2cbfb2af1342a477fab30aa17"
+  },
+  "cb_2023_41_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_41_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:39.239191+00:00",
+    "sha256": "366d526c6d2cbb6f11c53048cc1ed3f99ec227f029e9c1f8f3f64cd6996e7a34"
+  },
+  "cb_2023_39_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_39_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:39.238805+00:00",
+    "sha256": "a2312d5b53501282643dc1865848e35aaf45a8100cc6fa6de3e1ef7c62a8e0af"
+  },
+  "cb_2023_44_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_44_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:39.587360+00:00",
+    "sha256": "27f24b80df2bd9acb2d038c07d558edf7b51b8a805687ad956301435fbce081c"
+  },
+  "cb_2023_46_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_46_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:39.616955+00:00",
+    "sha256": "82369e3e473beea0e7ecf08bbb406d98c85b06ef09d159831df0dda6bc6f3d3e"
+  },
+  "cb_2023_42_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_42_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:39.582498+00:00",
+    "sha256": "2dbd96a9c9628dd30da09f81d65e75273b29e5c289c05e5f6edda6ebb4e2d873"
+  },
+  "cb_2023_49_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_49_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:39.881207+00:00",
+    "sha256": "1c56eb40e650c566622d8238c3b053d7fccad5caea38ed7bfef43c395c98f6ef"
+  },
+  "cb_2023_45_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_45_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:39.779059+00:00",
+    "sha256": "3d3e9c06b8ee29fdfbe3d156267009e109ca27551fe81bf0c6b79c0aa1b905c0"
+  },
+  "cb_2023_50_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_50_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:40.128062+00:00",
+    "sha256": "049cfa9b968db3de27c15fa0dc2f52fcb96ad87c02881e7c66dc52644bade202"
+  },
+  "cb_2023_47_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_47_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:40.128187+00:00",
+    "sha256": "5be652ca718850e43bfdf61666ec7f7e58ef84080ad334afdd49a4da78d848ea"
+  },
+  "cb_2023_51_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_51_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:40.373263+00:00",
+    "sha256": "172e398e73aa6db00bad3b720ca793dc36628cbfa332d3bd3b80926019f9c8bd"
+  },
+  "cb_2023_54_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_54_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:40.607545+00:00",
+    "sha256": "05b480e528f7da1f74c6ea57a713040bb20bedcdec8cd1d29ffc1eda86afaa40"
+  },
+  "cb_2023_53_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_53_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:40.611226+00:00",
+    "sha256": "704608592dda0964bcecd2381752325c9ce18095bc046d2269536fd33d49452f"
+  },
+  "cb_2023_56_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_56_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:40.899500+00:00",
+    "sha256": "f1091e7bcc6fb232a4c4ab20c5ca0fb1d0c7418a6527b86a4ae80f5665c3a530"
+  },
+  "cb_2023_55_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_55_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:40.898923+00:00",
+    "sha256": "c1590351f1167baa29be99c450e002e04195d8ab0c6100abb436657473711066"
+  },
+  "cb_2023_48_tract_500k.zip": {
+    "url": "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_48_tract_500k.zip",
+    "retrieved_at": "2026-10-11T05:44:40.900781+00:00",
+    "sha256": "96e3b88dfc8bf57aa8f1fedd2b95c65dfdb9fc96a199722a28948c2da97db061"
+  }
+}
