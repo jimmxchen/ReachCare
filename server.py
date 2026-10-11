@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import copy
 import csv
+import gzip
+import hmac
 import io
 import json
 import math
 import mimetypes
+import os
 import threading
 import time
 import traceback
@@ -193,8 +197,47 @@ class Application:
         return {"imported": len(parsed), "errors": []}
 
 
+def _auth_credentials():
+    """HTTP Basic credentials, when REACHCARE_PASSWORD is set (used by the hosted demo)."""
+    gemini._load_env()
+    password = os.environ.get("REACHCARE_PASSWORD", "")
+    return (os.environ.get("REACHCARE_USER", "username"), password) if password else None
+
+
+MESSAGING_PATHS = ("/api/signup", "/api/bot/")
+
+
 class Handler(BaseHTTPRequestHandler):
     app: Application
+
+    def authorized(self):
+        creds = _auth_credentials()
+        if not creds:
+            return True
+        header = self.headers.get("Authorization", "")
+        if header.startswith("Basic "):
+            try:
+                user, _, password = base64.b64decode(header[6:]).decode().partition(":")
+            except (ValueError, UnicodeDecodeError):
+                return False
+            return hmac.compare_digest(user.encode(), creds[0].encode()) and hmac.compare_digest(password.encode(), creds[1].encode())
+        return False
+
+    def deny(self):
+        body = b"Sign in to use ReachCare."
+        self.send_response(401)
+        self.send_header("WWW-Authenticate", 'Basic realm="ReachCare", charset="UTF-8"')
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def hosted_demo_blocks(self, path):
+        """The hosted demo is stateless; texting needs the always-on bridge, so say so instead of silently dropping data."""
+        if os.environ.get("VERCEL") and path.startswith(MESSAGING_PATHS):
+            self.json_response({"error": "Text alerts and the bot run on the ReachCare bridge, not this hosted demo. Run it locally with ./start.sh."}, 503)
+            return True
+        return False
 
     def json_response(self, value, status=200):
         body = json.dumps(value, allow_nan=False).encode()
@@ -206,6 +249,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if not self.authorized():
+            return self.deny()
         url = urlparse(self.path)
         path = url.path
         try:
@@ -243,6 +288,10 @@ class Handler(BaseHTTPRequestHandler):
                 body = target.read_bytes()
                 self.send_response(200)
                 self.send_header("Content-Type", (mimetypes.guess_type(target)[0] or "application/octet-stream") + "; charset=utf-8")
+                if len(body) > 50000 and target.suffix in (".json", ".js", ".css", ".html") and "gzip" in self.headers.get("Accept-Encoding", ""):
+                    body = gzip.compress(body, 6)
+                    self.send_header("Content-Encoding", "gzip")
+                    self.send_header("Vary", "Accept-Encoding")
                 self.send_header("Content-Length", str(len(body)))
                 self.send_header("X-Content-Type-Options", "nosniff")
                 self.end_headers()
@@ -251,6 +300,10 @@ class Handler(BaseHTTPRequestHandler):
             self.json_response({"error": str(exc)}, 400)
 
     def do_POST(self):
+        if not self.authorized():
+            return self.deny()
+        if self.hosted_demo_blocks(urlparse(self.path).path):
+            return
         try:
             length = int(self.headers.get("Content-Length", 0))
             limit = 20000000 if self.path.startswith("/api/bot/") else 2000000
