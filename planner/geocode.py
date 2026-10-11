@@ -8,6 +8,7 @@ import urllib.parse
 import urllib.request
 
 from .gemini import _load_env
+from .catalog import STATE_NAMES
 
 ENDPOINT = "https://maps.googleapis.com/maps/api/geocode/json"
 _cache = {}
@@ -18,8 +19,8 @@ def available():
     return bool(os.environ.get("GOOGLE_MAPS_API_KEY"))
 
 
-def locate(name):
-    """Return {"lat", "lon", "address"} for a North Carolina hospital name."""
+def locate(name, state_code=None):
+    """Return coordinates for a US hospital name, scoped to a selected state when supplied."""
     name = " ".join(str(name).split())[:120]
     if not name:
         raise ValueError("Enter your hospital name.")
@@ -27,20 +28,23 @@ def locate(name):
     key = os.environ.get("GOOGLE_MAPS_API_KEY")
     if not key:
         raise ValueError("Set GOOGLE_MAPS_API_KEY in .env so hospital names can be located.")
-    if name.lower() in _cache:
-        return _cache[name.lower()]
+    cache_key = (name.lower(), str(state_code or "").upper())
+    if cache_key in _cache:
+        return _cache[cache_key]
     try:  # Places text search understands business names far better than address geocoding.
-        found = _places("places:searchText", {"textQuery": name, "includedType": "hospital", "strictTypeFiltering": False,
-                                              "locationRestriction": NC_BOX, "maxResultCount": 1},
+        state_name = STATE_NAMES.get(str(state_code or "").upper(), "")
+        found = _places("places:searchText", {"textQuery": ", ".join(v for v in [name, state_name, "USA"] if v), "includedType": "hospital", "strictTypeFiltering": False,
+                                              "maxResultCount": 1},
                         mask="places.displayName,places.formattedAddress,places.location")
         top = (found.get("places") or [None])[0]
         if top and top.get("location"):
             result = {"lat": top["location"]["latitude"], "lon": top["location"]["longitude"], "address": top.get("formattedAddress", "")}
-            _cache[name.lower()] = result
+            _cache[cache_key] = result
             return result
     except ValueError:
         pass
-    query = urllib.parse.urlencode({"address": f"{name}, North Carolina", "components": "administrative_area:NC|country:US", "key": key})
+    state_name = STATE_NAMES.get(str(state_code or "").upper(), "")
+    query = urllib.parse.urlencode({"address": ", ".join(v for v in [name, state_name, "USA"] if v), "components": "country:US", "key": key})
     try:
         with urllib.request.urlopen(f"{ENDPOINT}?{query}", timeout=15) as response:
             data = json.load(response)
@@ -48,18 +52,17 @@ def locate(name):
         raise ValueError("Google Maps could not be reached. Try again.") from None
     status = data.get("status")
     if status == "ZERO_RESULTS" or not data.get("results"):
-        raise ValueError(f"We couldn't find \u201c{name}\u201d in North Carolina. Check the spelling or add the city.")
+        raise ValueError(f"We couldn't find \u201c{name}\u201d in the United States. Check the spelling or add the city and state.")
     if status != "OK":
         raise ValueError(f"Google Maps returned {status}. Check the API key and that the Geocoding API is enabled.")
     top = data["results"][0]
     loc = top["geometry"]["location"]
     result = {"lat": loc["lat"], "lon": loc["lng"], "address": top.get("formatted_address", "")}
-    _cache[name.lower()] = result
+    _cache[cache_key] = result
     return result
 
 
 PLACES = "https://places.googleapis.com/v1"
-NC_BOX = {"rectangle": {"low": {"latitude": 33.7, "longitude": -84.5}, "high": {"latitude": 36.7, "longitude": -75.3}}}
 
 
 def _places(path, body=None, mask=None):
@@ -80,11 +83,12 @@ def _places(path, body=None, mask=None):
         raise ValueError("Google Maps could not be reached.") from None
 
 
-def suggest(text, session=None):
+def suggest(text, session=None, state_code=None):
     text = " ".join(str(text).split())[:100]
     if len(text) < 3:
         return []
-    body = {"input": text, "includedRegionCodes": ["us"], "locationRestriction": NC_BOX}
+    suffix = STATE_NAMES.get(str(state_code or "").upper())
+    body = {"input": f"{text}, {suffix}" if suffix else text, "includedRegionCodes": ["us"]}
     if session and 8 <= len(str(session)) <= 64:
         body["sessionToken"] = str(session)
     data = _places("places:autocomplete", body)
@@ -103,22 +107,24 @@ def place_details(place_id, session=None):
     if not place_id.replace("_", "").replace("-", "").isalnum() or len(place_id) > 200:
         raise ValueError("Unknown place.")
     path = f"places/{place_id}" + (f"?sessionToken={urllib.parse.quote(str(session))}" if session and 8 <= len(str(session)) <= 64 else "")
-    data = _places(path, mask="id,displayName,formattedAddress,location")
+    data = _places(path, mask="id,displayName,formattedAddress,addressComponents,location")
     loc = data.get("location") or {}
     if "latitude" not in loc:
         raise ValueError("That place has no location.")
+    state_code = next((part.get("shortText") for part in data.get("addressComponents", []) if "administrative_area_level_1" in part.get("types", [])), None)
     return {"lat": loc["latitude"], "lon": loc["longitude"], "address": data.get("formattedAddress", ""),
-            "name": data.get("displayName", {}).get("text", "")}
+            "name": data.get("displayName", {}).get("text", ""), "state": state_code}
 
 
-def locate_place(text):
-    """Find a city, ZIP code or address inside North Carolina (Places text search).
+def locate_place(text, state_code=None):
+    """Find a city, ZIP code or address in the United States.
     Returns {"lat", "lon", "label"} or None."""
     text = " ".join(str(text).split())[:120]
     if not text:
         return None
     try:
-        found = _places("places:searchText", {"textQuery": f"{text}, North Carolina", "locationRestriction": NC_BOX, "maxResultCount": 1},
+        suffix = STATE_NAMES.get(str(state_code or "").upper(), "")
+        found = _places("places:searchText", {"textQuery": ", ".join(v for v in [text, suffix, "USA"] if v), "maxResultCount": 1},
                         mask="places.displayName,places.formattedAddress,places.location")
     except ValueError:
         return None

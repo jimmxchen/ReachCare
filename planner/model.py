@@ -48,7 +48,7 @@ SERVICES = {
 
 def default_config(today=None):
     today = today or date.today()
-    return {"service": "blood-pressure", "region": "NC", "travel_target": 30,
+    return {"service": "blood-pressure", "region": "", "travel_target": 30,
             "events": 1, "budget": 5000, "date_start": (today + timedelta(days=7)).isoformat(),
             "date_end": (today + timedelta(days=35)).isoformat(), "staff_count": 3,
             "services_per_staff_hour": 5, "clinical_hours": 4, "equipment_limit": 120,
@@ -65,8 +65,8 @@ def validate_config(config, counties):
     merged.update(config)
     if merged["service"] not in SERVICES:
         raise ValueError("Select a configured service before running a plan.")
-    if merged["region"] != "NC" and merged["region"] not in counties:
-        raise ValueError("Region must be North Carolina or a North Carolina county FIPS ID.")
+    if merged["region"] != "US" and merged["region"] not in counties and merged["region"] not in STATE_CODES:
+        raise ValueError("Region must be the United States, a state or district, or a county FIPS ID.")
     numeric = {"travel_target": (5, 120), "events": (1, 5), "budget": (0, 1000000),
                "staff_count": (0, 100), "services_per_staff_hour": (.1, 100),
                "clinical_hours": (.5, 12), "equipment_limit": (0, 10000),
@@ -114,6 +114,22 @@ def validate_config(config, counties):
     if not isinstance(merged["weather_block_events"], list) or any(event not in ["Tornado Warning", "Flash Flood Warning", "Severe Thunderstorm Warning"] for event in merged["weather_block_events"]):
         raise ValueError("Select supported weather event types for the operational policy.")
     return merged
+
+
+STATE_CODES = set("AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY".split())
+
+
+def travel_minutes_matrix(tracts, sites):
+    """Approximate travel minutes from coordinates using the documented straight-line factor."""
+    if not tracts or not sites:
+        return np.empty((len(tracts), len(sites)))
+    lat1 = np.radians(np.array([t["lat"] for t in tracts], dtype=float))[:, None]
+    lon1 = np.radians(np.array([t["lon"] for t in tracts], dtype=float))[:, None]
+    lat2 = np.radians(np.array([s["lat"] for s in sites], dtype=float))[None, :]
+    lon2 = np.radians(np.array([s["lon"] for s in sites], dtype=float))[None, :]
+    a = np.sin((lat2 - lat1) / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin((lon2 - lon1) / 2) ** 2
+    miles = 7917.6 * np.arcsin(np.sqrt(np.clip(a, 0, 1)))
+    return miles / .58
 
 
 def demo_operations(venues):
@@ -208,7 +224,7 @@ def sample_weights(rng, config, draws, concentration):
 
 
 def simulate(config, tracts, health, barrier, eligible, baseline, times, costs, multipliers, concentration=None, draws=None):
-    """Seeded policy sensitivity with shared county shocks and sampled road times."""
+    """Seeded policy sensitivity with shared county shocks and estimated travel times."""
     draws = draws or config["simulations"]
     concentration = concentration or config["concentration"]
     rng = np.random.default_rng(config["seed"])
@@ -305,16 +321,32 @@ def run_plan(state, routes, raw_config, operations=None, observations=None, weat
     config = validate_config(raw_config, state["counties"])
     service = SERVICES[config["service"]]
     indicator = service["indicator"]
-    tracts = [t for t in state["tracts"] if config["region"] == "NC" or t["county_id"] == config["region"]]
-    tract_indices = [i for i, t in enumerate(state["tracts"]) if config["region"] == "NC" or t["county_id"] == config["region"]]
-    matrix = routes[np.array(tract_indices)]
+    region = config["region"]
+    whole_region = region == "US" or region == state.get("state_code")
+    tracts = [t for t in state["tracts"] if whole_region or t["county_id"] == region]
+    tract_indices = [i for i, t in enumerate(state["tracts"]) if whole_region or t["county_id"] == region]
+    matrix = routes[np.array(tract_indices)] if routes is not None else None
     venue_count = len(state["venues"])
     existing = copy.deepcopy(state["existing_services"])
     for site in existing:
         if config["mode"] == "demo":
             site.update(service_verified=True, eligibility_verified=True, schedule_verified=True, service=config["service"], sample=True)
-    relevant = [venue_count + i for i, s in enumerate(existing) if s["id"] not in config["excluded_services"] and s.get("service", config["service"]) == config["service"] and all(s.get(k) is True for k in ["service_verified", "eligibility_verified", "schedule_verified"]) and (config["mode"] == "demo" or (s.get("verified_at") and not s.get("sample") and s.get("schedule_start", "9999") <= config["date_start"] and s.get("schedule_end", "0000") >= config["date_end"]))]
-    baseline, baseline_ids = baselines(matrix, relevant)
+    relevant = [i for i, s in enumerate(existing) if s["id"] not in config["excluded_services"] and s.get("service", config["service"]) == config["service"] and all(s.get(k) is True for k in ["service_verified", "eligibility_verified", "schedule_verified"]) and (config["mode"] == "demo" or (s.get("verified_at") and not s.get("sample") and s.get("schedule_start", "9999") <= config["date_start"] and s.get("schedule_end", "0000") >= config["date_end"]))]
+    if matrix is not None:
+        baseline, baseline_ids = baselines(matrix, [venue_count + i for i in relevant])
+    else:
+        baseline = np.full(len(tracts), np.nan)
+        baseline_ids = np.full(len(tracts), -1)
+        care = [(i, existing[i]) for i in relevant if existing[i].get("lat") is not None and existing[i].get("lon") is not None]
+        for start in range(0, len(care), 128):
+            block = care[start:start + 128]
+            distances = travel_minutes_matrix(tracts, [site for _, site in block])
+            nearest = np.argmin(distances, axis=1)
+            values = distances[np.arange(len(tracts)), nearest]
+            update = ~np.isfinite(baseline) | (values < baseline)
+            baseline[update] = values[update]
+            site_indices = np.array([venue_count + index for index, _ in block])
+            baseline_ids[update] = site_indices[nearest[update]]
     ops = demo_operations(state["venues"]) if config["mode"] == "demo" else copy.deepcopy(operations or {})
     for venue_id, overrides in config["venue_overrides"].items():
         ops.setdefault(venue_id, {}).update(overrides)
@@ -340,17 +372,17 @@ def run_plan(state, routes, raw_config, operations=None, observations=None, weat
     h_component = population * normalize(health, service["benchmark"]) * config["health_weight"]
     b_component = population * normalize(barrier, [0, 20]) * (1 - config["health_weight"])
     weights = (h_component + b_component) * multipliers
-    times = matrix[:, indices]
+    times = matrix[:, indices] if matrix is not None else travel_minutes_matrix(tracts, feasible)
     coverage = coverage_matrix(baseline, times, config["travel_target"]) & valid[:, None]
     costs = np.array([v["cost"] for v in feasible])
     result = {
         "model_version": MODEL_VERSION, "config": config, "service": service,
-        "scope": {"region": "North Carolina" if config["region"] == "NC" else state["counties"][config["region"]], "tracts": len(tracts), "counties": len({t["county_id"] for t in tracts}), "eligible_population": int(population.sum()), "scorable_tracts": int(valid.sum()), "unknown_baseline_tracts": int(np.isnan(baseline).sum()), "unknown_route_cells": int(np.isnan(times).sum())},
+        "scope": {"region": "United States" if region == "US" else state.get("state_name", region) if region == state.get("state_code") else state["counties"][region], "tracts": len(tracts), "counties": len({t["county_id"] for t in tracts}), "eligible_population": int(population.sum()), "scorable_tracts": int(valid.sum()), "unknown_baseline_tracts": int(np.isnan(baseline).sum()), "unknown_route_cells": 0 if matrix is None else int(np.isnan(times).sum())},
         "excluded": excluded, "candidates": len(feasible), "recommendations": [], "schedule": [],
         "selected_tracts": [], "trends": trends, "sources": state["sources"],
         "candidate_selection": state["candidate_selection"], "expected_attendance": None,
         "data_quality": state.get("quality_issues", []) + [{"tract_id": tracts[i]["id"], "issue": "Required indicator missing; excluded from score"} for i in np.flatnonzero(~valid)] + [{"tract_id": tracts[i]["id"], "issue": "Indicator outside fixed benchmark bounds; normalized value clipped"} for i in np.flatnonzero(clipped)],
-        "warnings": ["Geographic reach, clinical capacity, and turnout are different measures.", "Tract centroid driving times approximate residents' journeys; no live closure-aware routing.", "No matching history: turnout is unavailable.", "Benchmark bounds are fixed policy choices: high blood pressure 15–55%; no-vehicle households 0–20%."]}
+        "warnings": ["Geographic reach, clinical capacity, and turnout are different measures.", "Travel times are coordinate-based estimates, not turn-by-turn directions or live traffic.", "No matching history: turnout is unavailable.", "Benchmark bounds are fixed policy choices: high blood pressure 15–55%; no-vehicle households 0–20%."]}
     if config["mode"] == "demo":
         result["warnings"].insert(0, "DEMO: venue approvals, operating dates, staff rates, costs, and existing-service verification are sample inputs. These are not approved events.")
     if (~valid).any():
