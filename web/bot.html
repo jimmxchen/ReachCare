@@ -40,14 +40,15 @@
   <header class="topbar"><a class="brand" href="/"><img src="/reach-mark.png" alt="" width="30" height="33"><span>ReachCare</span></a><nav aria-label="Primary"><a href="/#/plan" data-nav="plan">Plan a clinic</a><a href="/#/docs" data-nav="docs">How it works</a><a href="/bot.html" aria-current="page">Ask ReachCare</a><a href="/join.html">Get alerts</a></nav></header>
   <div class="stage">
     <div class="bot-intro">
-      <h1>Find the next free clinic</h1>
+      <h1>Ask about proposed free clinics</h1>
       <p>Ask by text or voice, in any language. A text gets a text reply, and a voice note gets a voice reply in the same language.</p>
       <p class="note" id="mode-status" role="status"></p>
       <p class="note" id="ai-status" role="status"></p>
+      <p class="note" id="plan-status" role="status"></p>
     </div>
     <div id="thread" class="thread" aria-live="polite"></div>
     <div class="examples" id="examples">
-      <button type="button">When is the next free blood pressure clinic near Raleigh?</button>
+      <button type="button">Are there proposed blood pressure clinics near Raleigh?</button>
       <button type="button">Diabetes screening in Asheville</button>
       <button type="button">¿Dónde hay una clínica gratuita cerca de Charlotte?</button>
     </div>
@@ -75,12 +76,40 @@
       hostedPreview = !!options.hosted_preview;
       document.getElementById('mode-status').textContent = hostedPreview
         ? 'Hosted preview: answers use proposed plans from this browser. Events are not confirmed, and no iMessages are sent.'
-        : 'Local mode: answers use saved plans. Run ./start.sh to also receive and send iMessages through Photon.';
+        : 'Local mode: answers use saved proposed plans. iMessage replies run through Photon when the bridge is online.';
       document.getElementById('ai-status').textContent = options.gemini
         ? 'Gemini helps interpret questions and explain matching clinic plans.'
         : 'Gemini is not configured; clinic questions use a basic lookup. Set GEMINI_API_KEY to enable AI answers.';
+      updatePlanStatus();
       if (hostedPreview) seedExampleConversation();
     }).catch(err => { modeError = err; document.getElementById('mode-status').textContent = err.message; });
+
+    async function updatePlanStatus() {
+      const status = document.getElementById('plan-status');
+      try {
+        let plans;
+        if (hostedPreview) {
+          plans = JSON.parse(localStorage.getItem('reachcare-demo-plans') || '[]');
+        } else {
+          const response = await fetch('/api/plans');
+          if (!response.ok) throw new Error('Could not load saved plans.');
+          plans = await response.json();
+        }
+        if (!Array.isArray(plans)) plans = [];
+        if (plans.length) {
+          status.textContent = `${plans.length} proposed clinic plan${plans.length === 1 ? '' : 's'} available here. Dates and venues are not confirmed.`;
+        } else {
+          status.textContent = hostedPreview
+            ? 'No clinic proposals saved in this browser yet. '
+            : 'No clinic proposals saved on this computer yet. ';
+          const link = document.createElement('a');
+          link.href = '/#/plan'; link.textContent = 'Create a plan';
+          status.append(link, document.createTextNode(' to ask about its proposed locations.'));
+        }
+      } catch {
+        status.textContent = 'Could not check saved clinic proposals.';
+      }
+    }
 
     function bubble(who, body, audioUrl, label) {
       const d = document.createElement('div'); d.className = 'bubble ' + (who === 'me' ? 'me' : 'bot');

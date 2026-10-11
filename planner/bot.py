@@ -91,12 +91,15 @@ def facts_for(matches, service, where, asked_place):
 
 
 def english_reply(f, proposed=False):
-    clinic = ("free clinic" if f["service"] == "free clinic" else f"free {f['service']} clinic")
+    service = f["service"].replace("Blood-pressure", "blood pressure")
+    if service and service[0].isupper() and not service.startswith("COPD"):
+        service = service[0].lower() + service[1:]
+    clinic = ("free clinic" if service == "free clinic" else f"free {service} clinic")
     if proposed:
         clinic = "proposed " + clinic
     if not f["found"]:
         if proposed:
-            return f"I don't see an upcoming {clinic} in this browser demo. Create a plan in Plan a clinic first."
+            return f"I couldn't find an upcoming {clinic} in the saved proposals. These plans are not confirmed clinic events."
         return f"I don't see an upcoming {clinic} scheduled yet. Please check back soon."
     if f.get("far"):
         text = f"I don't see a {clinic} within 60 miles. The closest one is on"
@@ -209,6 +212,10 @@ def _service_text(services):
 
 
 def _clinic_answer(plans, profile, parsed, text, proposed=False):
+    if not plans:
+        reply = ("There are no clinic proposals saved here yet. Create one under Plan a clinic, then ask me about its proposed locations and dates. This does not tell us whether a free clinic is actually scheduled."
+                 if proposed else "I don't have any clinic plans to check yet. Please check back later for updates.")
+        return reply, None
     service = parsed["services"][0] if len(parsed["services"]) == 1 else (profile.get("services") or [None])[0] if len(profile.get("services") or []) == 1 else None
     where = geocode.locate_place(parsed["place"]) if parsed["place"] else None
     if not where and profile.get("lat") is not None:
@@ -279,13 +286,12 @@ def converse(plans, store, sender, text, language_hint=None, preview=False):
         if intent == "medical":
             return finish("I can't give medical advice. Please contact a clinician about symptoms or medicines. If it's an emergency, call 911.")
         if intent == "ask_clinic":
-            reply, match = _clinic_answer(plans, profile, parsed, text, preview)
+            reply, match = _clinic_answer(plans, profile, parsed, text, proposed=True)
             return finish(reply)
         if intent == "greeting":
             return finish(("Hi! I'm doing well, thanks for asking. " if "how are you" in text.lower() else "Hi! ") +
-                          ("I can help you explore proposed free clinic plans in North Carolina. What would you like to know?"
-                           if preview else "I can help you find free clinics in North Carolina. What would you like to know?"))
-        return finish(_browser_conversation(text, preview))
+                          "I can help you explore proposed free clinic plans in North Carolina. What would you like to know?")
+        return finish(_browser_conversation(text, proposed=True))
 
     if intent == "stop":
         profile["stopped"] = True

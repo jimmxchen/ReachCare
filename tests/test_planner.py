@@ -364,6 +364,16 @@ class BotTests(unittest.TestCase):
             bot.handle([], next_request, {"sender": "web-test", "reset": True}, preview=True)
             self.assertIsNone(next_request.profile)
 
+    def test_local_browser_explains_empty_plan_store(self):
+        from planner import bot
+        with patch("planner.bot.gemini.available", return_value=True), \
+                patch("planner.bot.gemini.generate", return_value='{"intent":"ask_clinic","services":["blood-pressure"],"place":"Raleigh"}'):
+            result = bot.handle([], PreviewStore(None),
+                                {"sender": "web-test", "text": "When is the next blood pressure clinic near Raleigh?"})
+        self.assertIn("no clinic proposals saved here", result["reply"].lower())
+        self.assertIn("Plan a clinic", result["reply"])
+        self.assertNotIn("Please check back soon", result["reply"])
+
     def test_browser_first_contact_greeting_needs_no_gemini_or_signup(self):
         from planner import bot
         with patch("planner.bot.gemini.available", return_value=True), \
@@ -381,6 +391,16 @@ class BotTests(unittest.TestCase):
         with patch("planner.bot.gemini.available", return_value=False):
             result = bot.handle(self.PLANS, PreviewStore(profile),
                                 {"sender": "web-test", "text": "When is the next blood pressure clinic?"}, preview=True)
+        self.assertIn("Near Library", result["reply"])
+        self.assertIn("proposed plan, not a confirmed event", result["reply"])
+
+    def test_local_browser_labels_matching_plan_as_proposal(self):
+        from planner import bot
+        profile = {"name": "Maria", "place": "Raleigh, NC", "lat": 35.78, "lon": -78.64,
+                   "services": ["blood-pressure"], "language": "eng", "stage": "done", "stopped": False}
+        with patch("planner.bot.gemini.available", return_value=False):
+            result = bot.handle(self.PLANS, PreviewStore(profile),
+                                {"sender": "web-test", "text": "When is the next blood pressure clinic?"})
         self.assertIn("Near Library", result["reply"])
         self.assertIn("proposed plan, not a confirmed event", result["reply"])
 
