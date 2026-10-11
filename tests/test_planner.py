@@ -416,6 +416,27 @@ class BotTests(unittest.TestCase):
         self.assertIn("not a confirmed event", result["reply"])
         self.assertIn("Near Library", generate.call_args.args[0])
 
+    def test_spanish_text_reply_survives_english_model_classification(self):
+        from planner import bot
+        parsed = {"intent": "ask_clinic", "name": None, "place": "Raleigh", "services": ["blood-pressure"], "language": "eng"}
+        prompts = []
+
+        def generate(prompt, **kwargs):
+            prompts.append(prompt)
+            return "La próxima clínica propuesta es en Near Library. Es un plan propuesto, no un evento confirmado."
+
+        with patch("planner.bot._parse", return_value=parsed), \
+                patch("planner.bot.geocode.locate_place", return_value={"lat": 35.78, "lon": -78.64, "label": "Raleigh"}), \
+                patch("planner.bot.gemini.available", return_value=True), \
+                patch("planner.bot.gemini.generate", side_effect=generate):
+            result = bot.handle(self.PLANS, PreviewStore(None),
+                                {"sender": "web-test", "text": "¿Cuándo es la próxima jornada de control de presión arterial cerca de Raleigh?"})
+        self.assertEqual(result["language"], "spa")
+        self.assertTrue(result["reply"].startswith("La próxima clínica"))
+        self.assertEqual(len(prompts), 1)
+        self.assertIn("Reply only in Spanish", prompts[0])
+        self.assertEqual(result["reply"].count("no un evento confirmado"), 1)
+
     def test_notifications_only_reach_matching_opted_in_people(self):
         from planner import bot
         from planner.subscribers import Subscribers

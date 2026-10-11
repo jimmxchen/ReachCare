@@ -7,6 +7,7 @@ from __future__ import annotations
 import base64
 import json
 import math
+import re
 from datetime import date
 
 from datetime import datetime, timezone
@@ -21,6 +22,7 @@ LANGUAGES = {"eng": "English", "spa": "Spanish", "fra": "French", "deu": "German
              "tur": "Turkish", "fas": "Persian", "hmn": "Hmong", "swh": "Swahili"}
 ISO2 = {"en": "eng", "es": "spa", "fr": "fra", "de": "deu", "pt": "por", "it": "ita", "zh": "zho", "vi": "vie", "ar": "ara",
         "ru": "rus", "hi": "hin", "ko": "kor", "ja": "jpn", "ht": "hat", "tl": "tgl", "pl": "pol", "ur": "urd"}
+SPANISH_TEXT = re.compile(r"[¿¡]|\b(?:cuándo|dónde|clínica|clínicas|presión|próxima|próximo|cerca de)\b", re.I)
 KEYWORDS = {"blood-pressure": ["blood pressure", "hypertension", "presión", "presion", "tension"],
             "diabetes": ["diabet", "sugar", "glucose", "azúcar", "azucar"],
             "copd": ["copd", "lung", "breath", "pulmon", "pulmón"],
@@ -211,11 +213,11 @@ def _service_text(services):
     return ", ".join(names[:-1]) + (" and " if len(names) > 1 else "") + names[-1] if names else "free clinic"
 
 
-def _clinic_answer(plans, profile, parsed, text, proposed=False):
+def _clinic_answer(plans, profile, parsed, text, proposed=False, language="eng"):
     if not plans:
         reply = ("There are no clinic proposals saved here yet. Create one under Plan a clinic, then ask me about its proposed locations and dates. This does not tell us whether a free clinic is actually scheduled."
                  if proposed else "I don't have any clinic plans to check yet. Please check back later for updates.")
-        return reply, None
+        return reply, None, False
     service = parsed["services"][0] if len(parsed["services"]) == 1 else (profile.get("services") or [None])[0] if len(profile.get("services") or []) == 1 else None
     where = geocode.locate_place(parsed["place"]) if parsed["place"] else None
     if not where and profile.get("lat") is not None:
@@ -223,21 +225,28 @@ def _clinic_answer(plans, profile, parsed, text, proposed=False):
     matches = upcoming(plans, service, where)
     facts = facts_for(matches, service, where, parsed["place"])
     reply = english_reply(facts, proposed)
+    localized = False
     if facts["found"] and gemini.available():
+        target = language_name(language)
         prompt = (PERSONA + " Answer the person's clinic question in 1-3 friendly sentences. "
                   "Use only the supplied clinic facts. Do not invent a date, venue, address, distance, or availability. "
                   "If no clinic was found, clearly say so. "
-                  + ("Every clinic here is a proposal, not a confirmed event. Say that clearly. " if proposed else "")
-                  + "Do not give medical advice. Reply in English; translation happens separately.\n\n"
+                  + ("Every clinic here is a proposal, not a confirmed event. Say that once. " if proposed else "")
+                  + "Do not add a medical disclaimer unless the person asked for medical advice. Do not repeat a warning. "
+                  f"Reply only in {target}; keep clinic names and street addresses as written.\n\n"
                   + f"Question: {text[:500]}\nFacts: {json.dumps(facts)}\n"
                   + f"Factual fallback answer: {reply}")
         try:
             generated = gemini.generate(prompt).strip()
             if generated:
-                reply = generated + (" This is a proposed plan, not a confirmed event." if proposed else "")
+                reply = generated
+                localized = target != "English" and (target != "Spanish" or bool(SPANISH_TEXT.search(generated)))
+                if proposed and not re.search(r"\b(?:not (?:a )?confirmed|unconfirmed|no (?:es |está )?(?:un evento |una clínica )?confirmad[oa])\b", generated, re.I):
+                    reply += (" Es un plan propuesto, no un evento confirmado." if target == "Spanish" else
+                              " This is a proposed plan, not a confirmed event." if target == "English" else "")
         except RuntimeError:
             pass
-    return reply, matches[0] if matches else None
+    return reply, matches[0] if matches else None, localized
 
 
 def _browser_conversation(text, proposed):
@@ -260,7 +269,7 @@ def _browser_conversation(text, proposed):
 
 
 def converse(plans, store, sender, text, language_hint=None, preview=False):
-    """Return (english_reply, language, match). Mutates the sender's profile."""
+    """Return (reply, language, match, localized). Mutates the sender's profile."""
     browser = sender.startswith("web-")
     profile = store.get(sender)
     first_contact = profile is None
@@ -272,22 +281,25 @@ def converse(plans, store, sender, text, language_hint=None, preview=False):
     stage = None if browser or profile["stage"] == "done" else profile["stage"]
     parsed = _parse(text, stage)
     language = language_hint or profile.get("language") or "eng"
-    if not language_hint and parsed.get("language") and len(text.split()) >= 4:
-        language = parsed["language"]
+    if not language_hint:
+        if SPANISH_TEXT.search(text):
+            language = "spa"
+        elif parsed.get("language") and len(text.split()) >= 4:
+            language = ISO2.get(str(parsed["language"]).lower(), str(parsed["language"]).lower())
     profile["language"] = language
     intent = parsed["intent"]
     match = None
 
-    def finish(reply):
+    def finish(reply, localized=False):
         store.put(sender, profile)
-        return reply, language, match
+        return reply, language, match, localized
 
     if browser:
         if intent == "medical":
             return finish("I can't give medical advice. Please contact a clinician about symptoms or medicines. If it's an emergency, call 911.")
         if intent == "ask_clinic":
-            reply, match = _clinic_answer(plans, profile, parsed, text, proposed=True)
-            return finish(reply)
+            reply, match, localized = _clinic_answer(plans, profile, parsed, text, proposed=True, language=language)
+            return finish(reply, localized)
         if intent == "greeting":
             return finish(("Hi! I'm doing well, thanks for asking. " if "how are you" in text.lower() else "Hi! ") +
                           "I can help you explore proposed free clinic plans in North Carolina. What would you like to know?")
@@ -313,10 +325,11 @@ def converse(plans, store, sender, text, language_hint=None, preview=False):
 
     # Clinic question: answer it, then continue onboarding if unfinished.
     if intent == "ask_clinic" and not first_contact:
-        reply, match = _clinic_answer(plans, profile, parsed, text, preview)
+        reply, match, localized = _clinic_answer(plans, profile, parsed, text, preview, language)
         if profile["stage"] != "done":
             reply += ("\n\nTo tailor the demo, " if preview else "\n\nTo text you updates, I need a bit more info. ") + PROMPTS[profile["stage"]]
-        return finish(reply)
+            localized = False
+        return finish(reply, localized)
 
     if first_contact:
         intro = ("Hi! I'm ReachCare. I help you explore proposed free clinic plans in North Carolina. "
@@ -324,8 +337,8 @@ def converse(plans, store, sender, text, language_hint=None, preview=False):
                  "Hi! I'm ReachCare. I help you find free community health clinics in North Carolina, "
                  "and I can text you when one is scheduled near you.")
         if intent == "ask_clinic":
-            reply, match = _clinic_answer(plans, profile, parsed, text, preview)
-            return finish(f"{reply}\n\n{intro}{'' if preview else ' Reply STOP anytime to opt out.'}\n\n{PROMPTS['name']}")
+            reply, match, localized = _clinic_answer(plans, profile, parsed, text, preview, language)
+            return finish(f"{reply}\n\n{intro}{'' if preview else ' Reply STOP anytime to opt out.'}\n\n{PROMPTS['name']}", False)
         return finish(f"{intro}{'' if preview else ' Reply STOP anytime to opt out.'}\n\nFirst, {PROMPTS['name'][0].lower()}{PROMPTS['name'][1:]}")
 
     stage = profile["stage"]
@@ -366,10 +379,10 @@ def converse(plans, store, sender, text, language_hint=None, preview=False):
     if intent == "greeting":
         return finish(f"Hi {profile['name']}! Ask me about the next {'proposed ' if preview else 'free '}clinic near {profile['place']}, "
                       "or reply UPDATE to change your info.")
-    reply, match = _clinic_answer(plans, profile, parsed, text, preview)
+    reply, match, localized = _clinic_answer(plans, profile, parsed, text, preview, language)
     if intent == "other" and match is not None and not any(w in text.lower() for w in ("clinic", "screen", "blood", "diabet", "asthma", "copd")):
         return finish("I can help you find free clinics. Try \"when is the next clinic near me?\" or reply HELP.")
-    return finish(reply)
+    return finish(reply, localized)
 
 
 def translate(reply, language):
@@ -399,8 +412,8 @@ def handle(plans, store, payload, preview=False):
         heard = elevenlabs.transcribe(audio, payload.get("mime") or "audio/mp4")
         if not heard["text"]:
             raise ValueError("I couldn't hear anything in that voice note.")
-        english, language, match = converse(plans, store, sender, heard["text"], heard["language"], preview)
-        reply = translate(english, language)
+        answer, language, match, localized = converse(plans, store, sender, heard["text"], heard["language"], preview)
+        reply = answer if localized else translate(answer, language)
         result = {"mode": "voice", "reply": reply, "language": language, "transcript": heard["text"],
                   "match": match, "sender": sender}
         try:
@@ -413,8 +426,8 @@ def handle(plans, store, payload, preview=False):
     text = str(payload.get("text", "")).strip()
     if not text:
         raise ValueError("Send a text message or a voice note.")
-    english, language, match = converse(plans, store, sender, text, preview=preview)
-    return {"mode": "text", "reply": translate(english, language), "language": language, "transcript": text,
+    answer, language, match, localized = converse(plans, store, sender, text, preview=preview)
+    return {"mode": "text", "reply": answer if localized else translate(answer, language), "language": language, "transcript": text,
             "match": match, "sender": sender}
 
 
